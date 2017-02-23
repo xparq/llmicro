@@ -38,17 +38,16 @@ $wordlist = [_MANY,
 		], 
             ];
 
-// API:
 //$PHRASE = 'WORD';
 $PHRASE = '/^([^\\s\\"\\/])/';
-//$PHRASE = $wordlist;
 $REGEXLIKE = ['REGEX_DELIM', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'REGEX_DELIM']];
 $REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
 $QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
 $QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
-$TERM = [_OR, $PHRASE, $REGEXLIKE, $QUOTED];
+$TERM = [_SAVE, _OR, $PHRASE, $REGEXLIKE, $QUOTED];
 //$TERM = [_OR, $PHRASE, $REGEXLIKE];
 //$TERM = [_OR, $REGEXLIKE, $QUOTED];
+//$QUERY = $wordlist;
 $QUERY = [_MANY, [$TERM, [_ANY, 'WHITESPACE']]];
 	
 //$s = $word;
@@ -69,6 +68,7 @@ if (!empty($_GET)) {
 }
 
 /*
+*/
 test($s, "");
 test($s, " ");
 test($s, "egy");
@@ -110,7 +110,6 @@ echo "PHRASE...<br>";
 
 test($s, "egy /ket to/");
 test($s, "egy /ketto/ \"harom\"");
-*/
 test($s, "a ! b");
 test($s, 'a b');
 test($s, '/k/ e');

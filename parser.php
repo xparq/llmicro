@@ -14,12 +14,14 @@ NOTES:
 */
 
 // Operators...
-define('_SEQ'	, ',');	// The default for just listing tokens is 'SEQ'.
+define('_SAVE'	, '_');	// "Emit code" for current rule. Usage: [_SAVE _OR X Y]
+define('_SEQ'	, ',');	// Default for just listing rules.
 define('_OR'	, '|');
 define('_SOME'	, '...');// 1 or more, not greedy!
 define('_MANY'	, '+');	// 1 or more, greedy!
 define('_ANY'	, '*');	// 0 or more; shortcut to [_OR [_MANY X] EMPTY]
 
+$OP[_SAVE]	= _SAVE;
 $OP[_SEQ]	= _SEQ;
 $OP[_OR]	= _OR;
 $OP[_SOME]	= _SOME;// must be followed by exactly 1 rule
@@ -266,6 +268,12 @@ DBG(" --> terminal rule: ".dump($rule));
 	}
 	else if (constr($rule))
 	{
+		$save_match = 0;
+		if ($rule[0] == _SAVE) {
+			$save_match = 1;
+			array_shift($rule); // eat it
+		}
+		
 		// First item is the op. of the rule, or else _SEQ is assumed:
 		if (!is_array($rule[0]) //!! Needed to silence Warning: Illegal offset type in isset or empty in parsing.php on line 52
 			&& op($rule[0])) {
@@ -278,6 +286,8 @@ DBG(" --> terminal rule: ".dump($rule));
 DBG(" --> complex rule: type '$op'"
 //	.dump($rule)
 );
+	  if (!$save_match) {
+
 		switch ($op)
 		{
 		case _SEQ:
@@ -297,6 +307,36 @@ DBG(" --> complex rule: type '$op'"
 			echo("--WTF? Unknown operator: '$op'!");
 			die;
 		}
+
+	  } else {
+
+		switch ($op)
+		{
+		case _SEQ:
+			$res = match_seq($seq, $rule);
+echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+			return $res;
+		case _OR:
+			$res = match_or($seq, $rule);
+echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+			return $res;
+		case _ANY:
+			$res = match_any($seq, $rule);
+echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+			return $res;
+		case _SOME:
+			$res = match_many($seq, $rule);
+echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+			return $res;
+		case _MANY:
+			$res = match_many_greedy($seq, $rule);
+echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+			return $res;
+		default:
+			echo("--WTF? Unknown operator: '$op'!");
+			die;
+		}
+	  }
 	}
 	else
 	{
