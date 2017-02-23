@@ -1,2 +1,9 @@
-﻿* Try the grammars with the optional trailing marks in the tests!
+﻿* Change it to only pass the start position, rather than new strings all the time!
 * Study a bit what the surprising recursion levels actually depend on!
+
+
+=============================================================================
+DONE:
+=============================================================================
+
++ Try the grammars with the optional trailing marks in the tests!

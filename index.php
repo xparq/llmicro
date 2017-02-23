@@ -1,5 +1,9 @@
 ﻿<?php error_reporting(-1);
 
+$t1 = microtime(true);
+
+define('MAX_RECURSION_DEPTH', 235);
+
 require "parser.php";
 
 //---------------------------------------------------------------------------
@@ -8,7 +12,7 @@ function test($syntax, $text)
 	echo("<hr><pre>Testing: \"$text\"...</pre>");
 
 	global $loopguard;
-	$loopguard = 135;
+	$loopguard = MAX_RECURSION_DEPTH;
 
 //	$src = tokenize($text);
 	$src = $text;
@@ -33,20 +37,21 @@ $DBG = false;
 //$word =	['WORD'];
 //$optional_space = [_OR, 'SPACE', 'EMPTY'];
 //$word_maybe_in_spaces =	[$optional_space, 'WORD', $optional_space];
+/*
 $wordlist = [_MANY,
 		[_OR,
 			'WORD',
 			['WHITESPACE', 'WORD'],
 		], 
             ];
-
+*/
 //$WORD = 'WORD';
 $WORD = '/^([^\\s\\"\\/]+)/';
 $REGEXLIKE = ['REGEX_DELIM', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'REGEX_DELIM']];
-$REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
+//$REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
 $QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
-$QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
-$TERM = [_SAVE, _OR, $WORD, $REGEXLIKE, $QUOTED];
+//$QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
+$TERM = [_SAVE, _OR, $REGEXLIKE, $WORD, $QUOTED];
 //$TERM = [_OR, $WORD, $REGEXLIKE];
 //$TERM = [_OR, $REGEXLIKE, $QUOTED];
 //$QUERY = $wordlist;
@@ -125,5 +130,15 @@ test($s, 'e /k/ "h"');
 test($s, 'w /r/ w "q"');
 test($s, 'w w /r r/ w w "q q"');
 
+echo "REAL-WORLD EXAMPLES...<br>";
+
 test($s, 'egy /k etto/ ket "h arom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
-test($s, 'qqqqqqq egy /k etto/ ddd"ddd dd"ddket "h arom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
+test($s, 'qqqqqqq egy /k etto/ ddd"ddd dd"ddket "h arom"');
+
+test($s, 'egy /ket/ "h /arom"');
+test($s, 'egy /k etto ket "h arom');
+test($s, 'egy ketto harom');
+test($s, 'egy ketto harom negy');
+test($s, 'egy ketto "ha rom" negy');
+
+echo "Timing: " . (microtime(true) - $t1);
