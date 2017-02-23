@@ -1,4 +1,4 @@
-﻿<?php error_reporting(-1);
+﻿<?php
 /*
 NOTES:
 	Only trying to match the leftmost portion of the input against 
@@ -27,8 +27,6 @@ define('_OR'	, '|');
 define('_SOME'	, '...');// 1 or more, not greedy; must be followed by exactly 1 rule
 define('_MANY'	, '+');	// 1 or more, greedy; must be followed by exactly 1 rule
 define('_ANY'	, '*');	// 0 or more; shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
-// "Userland" demo:
-define('_SAVE'	, '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y]
 
 // Operator functions...
 // Populated later below, according to:
@@ -82,15 +80,10 @@ function constr($rule)	{ return is_array($rule) && !empty($rule); }
 
 
 //---------------------------------------------------------------------------
-$OP[_TERMINAL]	= function($seq, $rule)
+$OP[_TERMINAL] = function($str, $rule)
 {
 	global $ATOM;
-//	assert(is_array($seq));
-	assert(is_string($seq));
 	assert(is_string($rule));
-
-//	$str = stringize($seq);
-	$str = $seq;
 
 	if (atom($rule)) { // atom pattern
 		$m = [];
@@ -102,7 +95,7 @@ DBG(" -- match_term(): MATCH! [$m[1]]");
 			return false;
 		}
 	} else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') {
-		// Direct regex literals in the syntax!
+		// direct regex literal pattern
 DBG(" -- match_term(): matching direct regex '$rule' against input: '$str'");
                 if (preg_match($rule, $str, $m)) {
 DBG(" -- match_term(): MATCH! [$m[1]]");
@@ -111,7 +104,7 @@ DBG(" -- match_term(): MATCH! [$m[1]]");
 		} else {
 			return false;
 		}
-	} else { // literal
+	} else { // literal non-pattern
 DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
                	if (strcasecmp($str, $rule) < 0) {
 			return false;
@@ -121,10 +114,10 @@ DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
 	}
 };
 
-$OP[_SEQ]	= function($seq, $rule)
+//---------------------------------------------------------------------------
+$OP[_SEQ] = function($seq, $rule)
 {
 DBG(" -- match_seq() ");
-	assert(is_string($seq));
 	assert(is_array($rule));
 
 	$pos = 0;
@@ -141,10 +134,10 @@ DBG(" -- match_seq() ");
 	return $pos;
 };
 
-$OP[_OR]	= function($seq, $rule)
+//---------------------------------------------------------------------------
+$OP[_OR] = function($seq, $rule)
 {
 DBG(" -- match_or() ");
-	assert(is_string($seq));
 	assert(is_array($rule));
 
 	foreach ($rule as $r)
@@ -163,11 +156,10 @@ DBG(" -- match_or(): returning false");
 	return false;
 };
 
-
-$OP[_ANY]	= function($seq, $rule)
+//---------------------------------------------------------------------------
+$OP[_ANY] = function($seq, $rule)
 {
 DBG(" -- match_any() ");
-	assert(is_string($seq));
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
@@ -192,12 +184,10 @@ DBG(" -- match_any(): returning pos=$pos");
 	return $pos;
 };
 
-
 //---------------------------------------------------------------------------
-$OP[_SOME]	= function($seq, $rule)
+$OP[_SOME] = function($seq, $rule)
 {
 DBG(" -- match_many() entered...");
-	assert(is_string($seq));
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
@@ -228,7 +218,6 @@ else               DBG(" -- match_many(): returning pos=$pos");
 $OP[_MANY]	= function($seq, $rule)
 {
 DBG(" -- match_many_greedy() entered...");
-	assert(is_string($seq));
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
@@ -259,18 +248,10 @@ else               DBG(" -- match_many_greedy(): returning pos=$pos");
 };
 
 //---------------------------------------------------------------------------
-// "Userland" demo:
-$OP[_SAVE]	= function($seq, $rule)
-{
-	$res = match($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
-	return $res;
-};
-
-//---------------------------------------------------------------------------
 function match($seq, $rule)
-// $seq is a SEQUENCE of syntaxt constructs.
-// If $seq matches $rule, it returns the position, otherwise false.
+// $seq is the source text (a string).
+// $rule is a syntax (tree) rule
+// If $seq matches $rule, it returns the length of the match, otherwise false.
 {
 	global $ATOM, $OP, $loopguard;
 

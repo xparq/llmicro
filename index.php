@@ -32,6 +32,17 @@ function test($syntax, $text)
 $DBG = true;
 $DBG = false;
 
+//---------------------------------------------------------------------------
+// "Userland" demo:
+define('_SAVE' , '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y]
+$OP[_SAVE] = function($seq, $rule)
+{
+	$res = match($seq, $rule);
+echo " [".substr(stringize($seq), 0, $res) . "] ";
+	return $res;
+};
+
+
 // Constructions...
 //$word =	[_MANY, 'LETTER'];
 //$word =	['WORD'];
@@ -51,7 +62,7 @@ $REGEXLIKE = ['REGEX_DELIM', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'REGE
 //$REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
 $QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
 //$QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
-$TERM = [_SAVE, _OR, $REGEXLIKE, $WORD, $QUOTED];
+$TERM = [_SAVE, _OR, $WORD, $QUOTED, $REGEXLIKE];
 //$TERM = [_OR, $WORD, $REGEXLIKE];
 //$TERM = [_OR, $REGEXLIKE, $QUOTED];
 //$QUERY = $wordlist;

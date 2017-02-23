@@ -1,4 +1,7 @@
-﻿* Study a bit what the surprisingly deep recursion levels actually depend on!
+﻿* Cleanup and objectify to give it a nice & simple API!
+* Study a bit what the surprisingly deep recursion levels actually depend on,
+  and how could be optimized. (I read somewhere that if not proceeding forward
+  with matching a rule, then no recursion is needed. What to make of that?)
 * OPs and ATOMs should be merged?
 
 =============================================================================
