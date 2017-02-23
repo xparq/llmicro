@@ -17,6 +17,8 @@ NOTES:
 	wrote, so... Let's celebrate! :)
 */
 
+$loopguard = 256; // Just a nice round default. Override for your case!
+
 // Operator keywords...
 // Can be customized by clients at will (in sync with the $OP map below).
 define('_TERMINAL'	, '#');	// Implicit, internal operation, just for a more uniform match()!
@@ -277,7 +279,7 @@ function match($seq, $rule)
 	}
 
 DBG("match(): input '".stringize($seq)."' against rule: ".dump($rule));
-	
+
 	if (term($rule)) // Terminal rule: atom or literal pattern.
 	{
 DBG(" --> terminal rule: ".dump($rule));

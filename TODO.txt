@@ -1,9 +1,4 @@
 ﻿* Study a bit what the surprising recursion levels actually depend on!
-  !NOTE: The reported recursion levels even change depending *solely* on
-  what the define('MAX_RECURSION_DEPTH', 115) is$! :-ooo Failing rules
-  seem to max it out, but *won't* throw exception! :-o I'm baffled.
-  That counter and the reporting stuff seems to be completely off, and 
-  I just can't see where. :-o
 
 * Change it to only pass the start position, rather than new strings all the time!
 * OPs and ATOMs should be merged?
@@ -11,5 +6,13 @@
 =============================================================================
 DONE:
 =============================================================================
+
++ !NOTE: The reported recursion levels even change depending *solely* on
+  what the define('MAX_RECURSION_DEPTH', 115) is$! :-ooo Failing rules
+  seem to max it out, but *won't* throw exception! :-o I'm baffled.
+  That counter and the reporting stuff seems to be completely off, and 
+  I just can't see where. :-o
+  -> Hehh, ehhehe... Umm... Don't tell anyone, but it was *decremented* 
+     from from the initial max. rather than incrementing till the limit! :)
 
 + Try the grammars with the optional trailing marks in the tests!

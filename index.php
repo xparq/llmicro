@@ -2,7 +2,7 @@
 
 $t1 = microtime(true);
 
-define('MAX_RECURSION_DEPTH', 115);
+define('MAX_RECURSION_DEPTH', 150);
 
 require "parser.php";
 
@@ -24,7 +24,7 @@ function test($syntax, $text)
 	} else {
 		echo("<p style='color:red;'>FAILED.</p>");
 	}
-	echo "<p>Recursion depth: $loopguard</p>";
+	echo "<p>Recursion depth: " . (MAX_RECURSION_DEPTH - $loopguard) . "</p>";
 }
 
 //---------------------------------------------------------------------------
