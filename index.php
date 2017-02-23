@@ -2,7 +2,7 @@
 
 $t1 = microtime(true);
 
-define('MAX_RECURSION_DEPTH', 235);
+define('MAX_RECURSION_DEPTH', 115);
 
 require "parser.php";
 

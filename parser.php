@@ -19,11 +19,13 @@ NOTES:
 
 // Operator keywords...
 // Can be customized by clients at will (in sync with the $OP map below).
+define('_TERMINAL'	, '#');	// Implicit, internal operation, just for a more uniform match()!
 define('_SEQ'	, ',');	// Default for just listing rules.
 define('_OR'	, '|');
 define('_SOME'	, '...');// 1 or more, not greedy; must be followed by exactly 1 rule
 define('_MANY'	, '+');	// 1 or more, greedy; must be followed by exactly 1 rule
 define('_ANY'	, '*');	// 0 or more; shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
+// "Userland" demo:
 define('_SAVE'	, '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y]
 
 // Operator functions...
@@ -32,7 +34,7 @@ define('_SAVE'	, '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y
 // Can be customized by clients at will (in sync with the keyword list above).
 $OP = [];
 
-// Atoms ("terminal token pattens")
+// Atoms ("terminal token pattens") - metasyntactic sugar...
 // They could as well be used as literals, but too fancy regex literals 
 // might confuse the parser, so these nicely behaving patterns are just 
 // quarantined and named here...
@@ -78,7 +80,7 @@ function constr($rule)	{ return is_array($rule) && !empty($rule); }
 
 
 //---------------------------------------------------------------------------
-function match_term($seq, $rule)
+$OP[_TERMINAL]	= function($seq, $rule)
 {
 	global $ATOM;
 //	assert(is_array($seq));
@@ -115,7 +117,7 @@ DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
 	               	return strlen($rule);
 		}
 	}
-}
+};
 
 $OP[_SEQ]	= function($seq, $rule)
 {
@@ -178,8 +180,7 @@ DBG(" -- match_any(): received false!");
 		} else {
 DBG(" -- match_any(): received len: $len");
 			if ($len == 0) {
-echo("--WTF? Infinite loop (in _ANY)!");
-die;
+				throw new Exception("--WTF? Infinite loop (in _ANY)!");
 			}
 			$pos += $len;
 		}
@@ -243,8 +244,7 @@ DBG(" -- match_many_greedy(): received len: $len");
 			$at_least_one_match = true;
 			// We'd get stuck in an infinite loop if not progressing! :-o
 			if ($len == 0) {
-echo("--WTF? Infinite loop (in _MANY)!");
-die;
+				throw new Exception("--WTF? Infinite loop (in _MANY)!");
 			}
 			$pos += $len;
 		}
@@ -257,11 +257,12 @@ else               DBG(" -- match_many_greedy(): returning pos=$pos");
 };
 
 //---------------------------------------------------------------------------
+// "Userland" demo:
 $OP[_SAVE]	= function($seq, $rule)
 {
-		$res = match($seq, $rule);
+	$res = match($seq, $rule);
 echo " [".substr(stringize($seq), 0, $res) . "] ";
-		return $res;
+	return $res;
 };
 
 //---------------------------------------------------------------------------
@@ -272,16 +273,15 @@ function match($seq, $rule)
 	global $ATOM, $OP, $loopguard;
 
 	if (!--$loopguard) {
-echo ("--WTF? Infinite loop (in 'match()')!<br>\n");
-die;
+		throw new Exception("--WTF? Infinite loop (in 'match()')!<br>\n");
 	}
 
 DBG("match(): input '".stringize($seq)."' against rule: ".dump($rule));
-	// Terminal rule! Atom pattern or literal.
-	if (term($rule))
+	
+	if (term($rule)) // Terminal rule: atom or literal pattern.
 	{
 DBG(" --> terminal rule: ".dump($rule));
-		return match_term($seq, $rule);
+		$f = op(_TERMINAL);
 	}
 	else if (constr($rule))
 	{
@@ -298,16 +298,14 @@ DBG(" --> terminal rule: ".dump($rule));
 DBG(" --> complex rule: type '$op'"
 //	.dump($rule)
 );
-		if ($f) {
-			return $f($seq, $rule);
-		} else {
-			echo("--WTF? Unknown operator: '$op'!");
-			die;
+		if (!$f) {
+			throw new Exception("--WTF? Unknown operator: '$op'!");
 		}
 	}
 	else
 	{
-		etc("--WTF? Broken syntax: " . dump($rule));
-		die;
+		throw new Exception("--WTF? Broken syntax: " . dump($rule));
 	}
+
+	return $f($seq, $rule);
 }

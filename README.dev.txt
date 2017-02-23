@@ -21,3 +21,5 @@ https://en.wikipedia.org/wiki/Simple_LR_parser
 https://en.wikipedia.org/wiki/Abstract_syntax_tree
 
 https://en.wikipedia.org/wiki/Operator-precedence_parser
+
+http://stackoverflow.com/questions/38796645/avoid-stackoverflow-in-recursive-algorithm-in-recursive-descent-parser

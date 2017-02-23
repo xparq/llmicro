@@ -1,6 +1,6 @@
 ﻿* Change it to only pass the start position, rather than new strings all the time!
 * Study a bit what the surprising recursion levels actually depend on!
-
+* OPs and ATOMs should be merged?
 
 =============================================================================
 DONE:
