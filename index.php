@@ -1,8 +1,11 @@
 ﻿<?php error_reporting(-1);
 
+define('MAX_RECURSION_DEPTH', 150);
+
 $t1 = microtime(true);
 
-define('MAX_RECURSION_DEPTH', 150);
+$DBG = true;
+$DBG = false;
 
 require "parser.php";
 
@@ -16,7 +19,7 @@ function test($syntax, $text)
 
 //	$src = tokenize($text);
 	$src = $text;
-	$res = match($src, $syntax);
+	$res = Parser::match($src, $syntax);
 	if ($res !== false) {
 		echo("<p style='color:green;'><b>MATCHED: '"
 				. substr($text, 0, $res) ."'"
@@ -28,17 +31,12 @@ function test($syntax, $text)
 }
 
 //---------------------------------------------------------------------------
-//main()
-$DBG = true;
-$DBG = false;
-
-//---------------------------------------------------------------------------
 // "Userland" demo:
 define('_SAVE' , '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y]
-$OP[_SAVE] = function($seq, $rule)
+Parser::$OP[_SAVE] = function($seq, $rule)
 {
-	$res = match($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
+	$res = Parser::match($seq, $rule);
+echo " [".substr($seq, 0, $res) . "] ";
 	return $res;
 };
 
@@ -65,7 +63,7 @@ $QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
 $TERM = [_SAVE, _OR, $WORD, $QUOTED, $REGEXLIKE];
 //$TERM = [_OR, $WORD, $REGEXLIKE];
 //$TERM = [_OR, $REGEXLIKE, $QUOTED];
-//$QUERY = $wordlist;
+$QUERY = $TERM;
 $QUERY = [_MANY, [$TERM, [_ANY, 'WHITESPACE']]];
 	
 //$s = $word;
@@ -85,8 +83,8 @@ if (!empty($_GET)) {
 	die;
 }
 
-/*
-*/
+//test($s, "a");
+
 test($s, "");
 test($s, " ");
 test($s, "egy");

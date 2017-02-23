@@ -1,4 +1,20 @@
-﻿Looks like what I "invented" ;) here is only the most basic type of
+﻿Original note from the source:
+
+	Only trying to match the leftmost portion of the input against 
+	the current rule, ignoring any leftover text on the right, so a
+	successful match may not be a "full" match.
+
+	I.e. the first successful match wins, regardless of consuming all,
+	or most of the text or only some left-side chunk or not; the priority 
+	is satisfying the rules, not eating all the input.
+	(A simple test after-the-fact for any residual text left is enough 
+	to check for a full match anyway.)
+
+	However, this doesn't quarantee an optimal match in case of an 
+	ambiguity. But life is short, and this is the first parser I ever
+	wrote, so... Let's celebrate! :)
+
+Looks like what I "invented" ;) here is only the most basic type of
 non-deterministic(?) recursive descent parser with backtracking. 
 I.e. the simplest of all. :)
 
