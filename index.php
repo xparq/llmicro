@@ -1,0 +1,127 @@
+﻿<?php error_reporting(-1);
+
+require "parser.php";
+
+//---------------------------------------------------------------------------
+function test($syntax, $text)
+{
+	echo("<hr><pre>Testing: \"$text\"...</pre>");
+
+	global $loopguard;
+	$loopguard = 100;
+
+	$src = tokenize($text);
+	$res = match($src, $syntax);
+	if ($res !== false) {
+		echo("<p style='color:green;'><b>MATCHED: '"
+				. substr($text, 0, $res) ."'"
+				."</b></p>\n");
+	} else {
+		echo("<p style='color:red;'>FAILED.</p>");
+	}
+}
+
+//---------------------------------------------------------------------------
+//main()
+$DBG = true;
+$DBG = false;
+
+// Constructions...
+//$word =	[_MANY, 'LETTER'];
+//$word =	['WORD'];
+//$optional_space = [_OR, 'SPACE', 'EMPTY'];
+//$word_maybe_in_spaces =	[$optional_space, 'WORD', $optional_space];
+$wordlist = [_MANY,
+		[_OR,
+			'WORD',
+			['WHITESPACE', 'WORD'],
+		], 
+            ];
+
+// API:
+//$PHRASE = 'WORD';
+$PHRASE = '/^([^\\s\\"\\/])/';
+//$PHRASE = $wordlist;
+$REGEXLIKE = ['REGEX_DELIM', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'REGEX_DELIM']];
+$REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
+$QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
+$QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
+$TERM = [_OR, $PHRASE, $REGEXLIKE, $QUOTED];
+//$TERM = [_OR, $PHRASE, $REGEXLIKE];
+//$TERM = [_OR, $REGEXLIKE, $QUOTED];
+$QUERY = [_MANY, [$TERM, [_ANY, 'WHITESPACE']]];
+	
+//$s = $word;
+//$s = $word_maybe_in_spaces;
+//$s = $wordlist;
+$s = $PHRASE;
+$s = $REGEXLIKE;
+$s = $QUOTED;
+$s = $TERM;
+$s = $QUERY;
+
+if (!empty($_GET)) {
+	$syntaxname = $_GET['s'];
+	if (!isset($$syntaxname)) { echo "-- Unknown syntax: '$syntaxname'!"; die; }
+	$text = $_GET['t'];
+	test($$syntaxname, $text);
+	die;
+}
+
+/*
+test($s, "");
+test($s, " ");
+test($s, "egy");
+test($s, " egy ");
+test($s, " egy  ");
+test($s, "  x  ");
+test($s, "  egy  ");
+
+echo "PHRASE...<br>";
+
+test($s, "egy ketto");
+test($s, "egy ket ha");
+test($s, " egy ket ");
+test($s, "a ! b");
+
+echo "REX...<br>";
+
+test($s, "/");
+test($s, "//");
+test($s, "/x/");
+test($s, " /x/");
+test($s, "/x");
+test($s, '/ket to/');
+test($s, '/ketto/ "harom"');
+test($s, '/k etto/ "h arom"');
+
+echo "QUOTED...<br>";
+
+test($s, '"');
+test($s, '""');
+test($s, '"x"');
+test($s, ' "x"');
+test($s, '"x');
+test($s, '"ket to"');
+test($s, '"ketto" "harom"');
+test($s, '"k etto" "h arom"');
+
+echo "PHRASE...<br>";
+
+test($s, "egy /ket to/");
+test($s, "egy /ketto/ \"harom\"");
+*/
+test($s, "a ! b");
+test($s, 'a b');
+test($s, '/k/ e');
+test($s, 'e /k/');
+test($s, '/k/ "q"');
+test($s, '"q" /k/');
+test($s, 'e /k/ e');
+test($s, '/a/ b /c/');
+test($s, '/a/ b /c/ d');
+test($s, 'e /k/ "h"');
+test($s, 'w /r/ w "q"');
+test($s, 'w w /r r/ w w "q q"');
+
+test($s, 'egy /k etto/ ket "h arom"');	// recursion depth: 105! :-o
