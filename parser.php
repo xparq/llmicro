@@ -1,32 +1,36 @@
 ﻿<?php error_reporting(-1);
 /*
 NOTES:
-	Currently only testing the leftmost portion of the input against 
+	Only trying to match the leftmost portion of the input against 
 	the current rule, ignoring any leftover text on the right, so a
 	successful match may not be a "full" match.
 
-	I.e. the first "deep match" wins, regardless of consuming all the
-	text or only some left-side chunk or if; the priority is satisfying
-	the rules, not eating all the input.
+	I.e. the first successful match wins, regardless of consuming all,
+	or most of the text or only some left-side chunk or not; the priority 
+	is satisfying the rules, not eating all the input.
 
 	A simple test after-the-fact for any residual text left is enough 
 	to check for a full match anyway.
+
+	However, this doesn't quarantee an optimal match in case of an 
+	ambiguity. But life is short, and this is the first parser I ever
+	wrote, so... Let's celebrate! :)
 */
 
-// Operators...
-define('_SAVE'	, '_');	// "Emit code" for current rule. Usage: [_SAVE _OR X Y]
+// Operator keywords...
+// Can be customized by clients at will (in sync with the $OP map below).
 define('_SEQ'	, ',');	// Default for just listing rules.
 define('_OR'	, '|');
-define('_SOME'	, '...');// 1 or more, not greedy!
-define('_MANY'	, '+');	// 1 or more, greedy!
-define('_ANY'	, '*');	// 0 or more; shortcut to [_OR [_MANY X] EMPTY]
+define('_SOME'	, '...');// 1 or more, not greedy; must be followed by exactly 1 rule
+define('_MANY'	, '+');	// 1 or more, greedy; must be followed by exactly 1 rule
+define('_ANY'	, '*');	// 0 or more; shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
+define('_SAVE'	, '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y]
 
-$OP[_SAVE]	= _SAVE;
-$OP[_SEQ]	= _SEQ;
-$OP[_OR]	= _OR;
-$OP[_SOME]	= _SOME;// must be followed by exactly 1 rule
-$OP[_MANY]	= _MANY;// must be followed by exactly 1 rule
-$OP[_ANY]	= _ANY;	// must be followed by exactly 1 rule
+// Operator functions...
+// Populated later below, according to:
+//    $OP[_SOME-OP] = function($chunk, $rule) { ... return false or match-length; }
+// Can be customized by clients at will (in sync with the keyword list above).
+$OP = [];
 
 // Atoms ("terminal token pattens")
 // They could as well be used as literals, but too fancy regex literals 
@@ -45,7 +49,8 @@ $ATOM['REGEX_DELIM'] = $ATOM['SLASH'];
 //---------------------------------------------------------------------------
 function tokenize($str)
 {
-	return preg_split('//', $str, null, PREG_SPLIT_NO_EMPTY);
+//	return preg_split('//', $str, null, PREG_SPLIT_NO_EMPTY);
+	return $str;
 }
 
 function stringize($seq)
@@ -66,8 +71,8 @@ function DBG($msg)
 }
 
 //---------------------------------------------------------------------------
-function atom($rule)	{ global $ATOM; return isset($ATOM[$rule]); }
-function op($rule)	{ global $OP;   return isset($OP[$rule]); }
+function atom($rule)	{ global $ATOM; return isset($ATOM[$rule]) ? $ATOM[$rule] : false; }
+function op($rule)	{ global $OP;   return isset($OP[$rule])   ? $OP[$rule]   : false; }
 function term($rule)	{ return is_string($rule); }
 function constr($rule)	{ return is_array($rule) && !empty($rule); }
 
@@ -112,7 +117,7 @@ DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
 	}
 }
 
-function match_seq($seq, $rule)
+$OP[_SEQ]	= function($seq, $rule)
 {
 DBG(" -- match_seq() ");
 	assert(is_string($seq));
@@ -130,9 +135,9 @@ DBG(" -- match_seq() ");
 	}
 
 	return $pos;
-}
+};
 
-function match_or($seq, $rule)
+$OP[_OR]	= function($seq, $rule)
 {
 DBG(" -- match_or() ");
 	assert(is_string($seq));
@@ -152,10 +157,10 @@ DBG(" -- match_or(): failed, skipping to next, if any...");
 
 DBG(" -- match_or(): returning false");
 	return false;
-}
+};
 
 
-function match_any($seq, $rule)
+$OP[_ANY]	= function($seq, $rule)
 {
 DBG(" -- match_any() ");
 	assert(is_string($seq));
@@ -182,11 +187,11 @@ die;
 
 DBG(" -- match_any(): returning pos=$pos");
 	return $pos;
-}
+};
 
 
 //---------------------------------------------------------------------------
-function match_many($seq, $rule)
+$OP[_SOME]	= function($seq, $rule)
 {
 DBG(" -- match_many() entered...");
 	assert(is_string($seq));
@@ -214,10 +219,10 @@ $res = $at_least_one_match ? $pos : false;
 if ($res == false) DBG(" -- match_many(): returning false");
 else               DBG(" -- match_many(): returning pos=$pos");
 	return $at_least_one_match ? $pos : false;
-}
+};
 
 //---------------------------------------------------------------------------
-function match_many_greedy($seq, $rule)
+$OP[_MANY]	= function($seq, $rule)
 {
 DBG(" -- match_many_greedy() entered...");
 	assert(is_string($seq));
@@ -249,7 +254,15 @@ $res = $at_least_one_match ? $pos : false;
 if ($res == false) DBG(" -- match_many_greedy(): returning false");
 else               DBG(" -- match_many_greedy(): returning pos=$pos");
 	return $at_least_one_match ? $pos : false;
-}
+};
+
+//---------------------------------------------------------------------------
+$OP[_SAVE]	= function($seq, $rule)
+{
+		$res = match($seq, $rule);
+echo " [".substr(stringize($seq), 0, $res) . "] ";
+		return $res;
+};
 
 //---------------------------------------------------------------------------
 function match($seq, $rule)
@@ -272,12 +285,6 @@ DBG(" --> terminal rule: ".dump($rule));
 	}
 	else if (constr($rule))
 	{
-		$save_match = 0;
-		if ($rule[0] == _SAVE) {
-			$save_match = 1;
-			array_shift($rule); // eat it
-		}
-		
 		// First item is the op. of the rule, or else _SEQ is assumed:
 		if (!is_array($rule[0]) //!! Needed to silence Warning: Illegal offset type in isset or empty in parsing.php on line 52
 			&& op($rule[0])) {
@@ -287,60 +294,16 @@ DBG(" --> terminal rule: ".dump($rule));
 			$op = _SEQ;
 		}
 
+		$f = op($op);
 DBG(" --> complex rule: type '$op'"
 //	.dump($rule)
 );
-	  if (!$save_match) {
-
-		switch ($op)
-		{
-		case _SEQ:
-			return match_seq($seq, $rule);
-			break;
-		case _OR:
-			return match_or($seq, $rule);
-			break;
-		case _ANY:
-			return match_any($seq, $rule);
-		case _SOME:
-			return match_many($seq, $rule);
-		case _MANY:
-			return match_many_greedy($seq, $rule);
-			break;
-		default:
+		if ($f) {
+			return $f($seq, $rule);
+		} else {
 			echo("--WTF? Unknown operator: '$op'!");
 			die;
 		}
-
-	  } else {
-
-		switch ($op)
-		{
-		case _SEQ:
-			$res = match_seq($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
-			return $res;
-		case _OR:
-			$res = match_or($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
-			return $res;
-		case _ANY:
-			$res = match_any($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
-			return $res;
-		case _SOME:
-			$res = match_many($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
-			return $res;
-		case _MANY:
-			$res = match_many_greedy($seq, $rule);
-echo " [".substr(stringize($seq), 0, $res) . "] ";
-			return $res;
-		default:
-			echo("--WTF? Unknown operator: '$op'!");
-			die;
-		}
-	  }
 	}
 	else
 	{

@@ -8,7 +8,7 @@ function test($syntax, $text)
 	echo("<hr><pre>Testing: \"$text\"...</pre>");
 
 	global $loopguard;
-	$loopguard = 74;
+	$loopguard = 135;
 
 //	$src = tokenize($text);
 	$src = $text;
@@ -125,3 +125,4 @@ test($s, 'w /r/ w "q"');
 test($s, 'w w /r r/ w w "q q"');
 
 test($s, 'egy /k etto/ ket "h arom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
+test($s, 'qqqqqqq egy /k etto/ ddd"ddd dd"ddket "h arom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
