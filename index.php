@@ -20,6 +20,7 @@ function test($syntax, $text)
 	} else {
 		echo("<p style='color:red;'>FAILED.</p>");
 	}
+	echo "<p>Recursion depth: $loopguard</p>";
 }
 
 //---------------------------------------------------------------------------
