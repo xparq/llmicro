@@ -270,7 +270,7 @@ echo " [".substr(stringize($seq), 0, $res) . "] ";
 //---------------------------------------------------------------------------
 function match($seq, $rule)
 // $seq is a SEQUENCE of syntaxt constructs.
-// If $seq matches $rule, it returns the position true, otherwise false.
+// If $seq matches $rule, it returns the position, otherwise false.
 {
 	global $ATOM, $OP, $loopguard;
 

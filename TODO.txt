@@ -1,11 +1,17 @@
-﻿* Study a bit what the surprising recursion levels actually depend on!
-
-* Change it to only pass the start position, rather than new strings all the time!
+﻿* Study a bit what the surprisingly deep recursion levels actually depend on!
 * OPs and ATOMs should be merged?
 
 =============================================================================
 DONE:
 =============================================================================
+
+- Change it to only pass the start position, rather than new strings all the time!
+  I tried, but the positions were strangely off, with an accumulating error,
+  and I didn't feel like debugging it. Also: it required 
+  `while(!empty($text[$pos]))` checks, and it reminded me again how this whole
+  idea of directly indexing a string is not UTF8-safe at all anyway. The 
+  other string functions like substr and strlen etc. at least have their 
+  mb_... counterparts.
 
 + !NOTE: The reported recursion levels even change depending *solely* on
   what the define('MAX_RECURSION_DEPTH', 115) is$! :-ooo Failing rules
