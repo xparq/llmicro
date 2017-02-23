@@ -38,14 +38,14 @@ $wordlist = [_MANY,
 		], 
             ];
 
-//$PHRASE = 'WORD';
-$PHRASE = '/^([^\\s\\"\\/])/';
+//$WORD = 'WORD';
+$WORD = '/^([^\\s\\"\\/]+)/';
 $REGEXLIKE = ['REGEX_DELIM', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'REGEX_DELIM']];
 $REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
 $QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
 $QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
-$TERM = [_SAVE, _OR, $PHRASE, $REGEXLIKE, $QUOTED];
-//$TERM = [_OR, $PHRASE, $REGEXLIKE];
+$TERM = [_SAVE, _OR, $WORD, $REGEXLIKE, $QUOTED];
+//$TERM = [_OR, $WORD, $REGEXLIKE];
 //$TERM = [_OR, $REGEXLIKE, $QUOTED];
 //$QUERY = $wordlist;
 $QUERY = [_MANY, [$TERM, [_ANY, 'WHITESPACE']]];
@@ -53,7 +53,7 @@ $QUERY = [_MANY, [$TERM, [_ANY, 'WHITESPACE']]];
 //$s = $word;
 //$s = $word_maybe_in_spaces;
 //$s = $wordlist;
-$s = $PHRASE;
+$s = $WORD;
 $s = $REGEXLIKE;
 $s = $QUOTED;
 $s = $TERM;
