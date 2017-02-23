@@ -50,7 +50,8 @@ function tokenize($str)
 
 function stringize($seq)
 {
-	return implode($seq);
+	//return implode($seq);
+	return $seq;
 }
 
 function dump($mixed)
@@ -75,9 +76,12 @@ function constr($rule)	{ return is_array($rule) && !empty($rule); }
 function match_term($seq, $rule)
 {
 	global $ATOM;
+//	assert(is_array($seq));
+	assert(is_string($seq));
 	assert(is_string($rule));
 
-	$str = stringize($seq);
+//	$str = stringize($seq);
+	$str = $seq;
 
 	if (atom($rule)) { // atom pattern
 		$m = [];
@@ -111,13 +115,13 @@ DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
 function match_seq($seq, $rule)
 {
 DBG(" -- match_seq() ");
-	assert(is_array($seq));
+	assert(is_string($seq));
 	assert(is_array($rule));
 
 	$pos = 0;
 	foreach ($rule as $r)
 	{
-		$chunk = array_slice($seq, $pos);
+		$chunk = substr($seq, $pos);
 		if (($len = match($chunk, $r)) === false) {
 			return false;
 		} else {
@@ -131,7 +135,7 @@ DBG(" -- match_seq() ");
 function match_or($seq, $rule)
 {
 DBG(" -- match_or() ");
-	assert(is_array($seq));
+	assert(is_string($seq));
 	assert(is_array($rule));
 
 	foreach ($rule as $r)
@@ -154,14 +158,14 @@ DBG(" -- match_or(): returning false");
 function match_any($seq, $rule)
 {
 DBG(" -- match_any() ");
-	assert(is_array($seq));
+	assert(is_string($seq));
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
 	$pos = 0;
 	$r = $rule[0];
 	do {
-		$chunk = array_slice($seq, $pos);
+		$chunk = substr($seq, $pos);
 DBG(" -- match_any(): iteration for '".stringize($chunk) ."'");
 		if (($len = match($chunk, $r)) === false) {
 DBG(" -- match_any(): received false!");
@@ -185,7 +189,7 @@ DBG(" -- match_any(): returning pos=$pos");
 function match_many($seq, $rule)
 {
 DBG(" -- match_many() entered...");
-	assert(is_array($seq));
+	assert(is_string($seq));
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
@@ -193,7 +197,7 @@ DBG(" -- match_many() entered...");
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-		$chunk = array_slice($seq, $pos);
+		$chunk = substr($seq, $pos);
 DBG(" -- match_many(): iteration for '".stringize($chunk) ."'");
 		if (($len = match($chunk, $r)) === false) {
 DBG(" -- match_many(): received false!");
@@ -216,7 +220,7 @@ else               DBG(" -- match_many(): returning pos=$pos");
 function match_many_greedy($seq, $rule)
 {
 DBG(" -- match_many_greedy() entered...");
-	assert(is_array($seq));
+	assert(is_string($seq));
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
@@ -224,7 +228,7 @@ DBG(" -- match_many_greedy() entered...");
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-		$chunk = array_slice($seq, $pos);
+		$chunk = substr($seq, $pos);
 DBG(" -- match_many_greedy(): iteration for '".stringize($chunk) ."'");
 		if (($len = match($chunk, $r)) === false) {
 DBG(" -- match_many_greedy(): received false!");
@@ -314,23 +318,23 @@ DBG(" --> complex rule: type '$op'"
 		{
 		case _SEQ:
 			$res = match_seq($seq, $rule);
-echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+echo " [".substr(stringize($seq), 0, $res) . "] ";
 			return $res;
 		case _OR:
 			$res = match_or($seq, $rule);
-echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+echo " [".substr(stringize($seq), 0, $res) . "] ";
 			return $res;
 		case _ANY:
 			$res = match_any($seq, $rule);
-echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+echo " [".substr(stringize($seq), 0, $res) . "] ";
 			return $res;
 		case _SOME:
 			$res = match_many($seq, $rule);
-echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+echo " [".substr(stringize($seq), 0, $res) . "] ";
 			return $res;
 		case _MANY:
 			$res = match_many_greedy($seq, $rule);
-echo " [".stringize(array_slice($seq, 0, $res)) . "] ";
+echo " [".substr(stringize($seq), 0, $res) . "] ";
 			return $res;
 		default:
 			echo("--WTF? Unknown operator: '$op'!");
