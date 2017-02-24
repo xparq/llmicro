@@ -1,4 +1,7 @@
-﻿<?php error_reporting(-1);
+﻿<head>
+<meta charset="utf-8">
+</head>
+<?php error_reporting(-1);
 
 define('MY_RECURSION_DEPTH', 150);
 
@@ -7,7 +10,12 @@ $t1 = microtime(true);
 $DBG = true;
 $DBG = false;
 
-require "parser.php";
+$PARSER_SCRIPT = "out/parser.php";
+if (!file_exists($PARSER_SCRIPT)) {
+	echo "Run `build` to create '$PARSER_SCRIPT', or just copy over the original!";
+	die;
+}
+require $PARSER_SCRIPT;
 
 //---------------------------------------------------------------------------
 function test($syntax, $text)
@@ -54,7 +62,7 @@ $wordlist = [_MANY,
 */
 //$WORD = 'WORD';
 $WORD = '/^([^\\s\\"\\/]+)/';
-$REGEXLIKE = ['REGEX_DELIM', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'REGEX_DELIM']];
+$REGEXLIKE = ['SLASH', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'SLASH']];
 //$REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
 $QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
 //$QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
@@ -128,8 +136,10 @@ test($s, "a ! b");
 test($s, 'a b');
 test($s, '/k/ e');
 test($s, 'e /k/');
+
 test($s, '/k/ "q"');
 test($s, '"q" /k/');
+
 test($s, 'e /k/ e');
 test($s, '/a/ b /c/');
 test($s, '/a/ b /c/ d');
@@ -147,5 +157,16 @@ test($s, 'egy /k etto ket "h arom');
 test($s, 'egy ketto harom');
 test($s, 'egy ketto harom negy');
 test($s, 'egy ketto "ha rom" negy');
+
+echo "ACCENTED...<br>";
+
+test($s, 'egy /k ettő/ ket "h árom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
+test($s, 'qqqqqqq egy /k etto/ ddd"ddd dd"ddket "h arom"');
+
+test($s, 'egy /ket/ "h /árom"');
+test($s, 'egy /k ettő ket "h árom');
+test($s, 'egy kettő három');
+test($s, 'egy kettő három nágy');
+test($s, 'öt négy "há rom" kettő "egy');
 
 echo "Timing: " . (microtime(true) - $t1);
