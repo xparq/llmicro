@@ -1,6 +1,6 @@
 ﻿<?php error_reporting(-1);
 
-define('MAX_RECURSION_DEPTH', 150);
+define('MY_RECURSION_DEPTH', 150);
 
 $t1 = microtime(true);
 
@@ -14,10 +14,8 @@ function test($syntax, $text)
 {
 	echo("<hr><pre>Testing: \"$text\"...</pre>");
 
-	global $loopguard;
-	$loopguard = MAX_RECURSION_DEPTH;
+	Parser::$loopguard = MY_RECURSION_DEPTH;
 
-//	$src = tokenize($text);
 	$src = $text;
 	$res = Parser::match($src, $syntax);
 	if ($res !== false) {
@@ -27,7 +25,7 @@ function test($syntax, $text)
 	} else {
 		echo("<p style='color:red;'>FAILED.</p>");
 	}
-	echo "<p>Recursion depth: " . (MAX_RECURSION_DEPTH - $loopguard) . "</p>";
+	echo "<p>Recursion depth: " . (MY_RECURSION_DEPTH - Parser::$loopguard) . "</p>";
 }
 
 //---------------------------------------------------------------------------
