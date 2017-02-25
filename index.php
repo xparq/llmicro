@@ -1,7 +1,9 @@
-﻿<head>
-<meta charset="utf-8">
-</head>
 <?php error_reporting(-1);
+
+//Not needed for my test env:
+//header('Content-Type: text/html; charset=utf-8');
+//ini_set("mbstring.language", "Neutral");
+//ini_set("internal_encoding", "UTF-8");
 
 define('MY_RECURSION_DEPTH', 150);
 
@@ -28,7 +30,7 @@ function test($syntax, $text)
 	$res = Parser::match($src, $syntax);
 	if ($res !== false) {
 		echo("<p style='color:green;'><b>MATCHED: '"
-				. substr($text, 0, $res) ."'"
+				. mb_substr($text, 0, $res) ."'"
 				."</b></p>\n");
 	} else {
 		echo("<p style='color:red;'>FAILED.</p>");
@@ -42,7 +44,7 @@ define('_SAVE' , '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y
 Parser::$OP[_SAVE] = function($seq, $rule)
 {
 	$res = Parser::match($seq, $rule);
-echo " [".substr($seq, 0, $res) . "] ";
+echo " [".mb_substr($seq, 0, $res) . "] ";
 	return $res;
 };
 
@@ -60,12 +62,14 @@ $wordlist = [_MANY,
 		], 
             ];
 */
-//$WORD = 'WORD';
-$WORD = '/^([^\\s\\"\\/]+)/';
-$REGEXLIKE = ['SLASH', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'SLASH']];
-//$REGEXLIKE = ['REGEX_DELIM', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'REGEX_DELIM'];
-$QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTER', 'WHITESPACE']], [_ANY, 'QUOTE']];
-//$QUOTED = ['QUOTE', [_MANY, [_OR, 'LETTER', 'WHITESPACE']], 'QUOTE'];
+$WORD = 'LETTERS';
+//$WORD = '/^([^\\s\\"\\/]+)/';
+$REGEXLIKE = ['SLASH', [_ANY, [_OR, 'LETTERS', 'WHITESPACE']], [_ANY, 'SLASH']];
+//!!WHY IS THIS NOT DOING WHAT I THINK? :)
+//!!$REGEXLIKE = ['SLASH', [_OR, 'LETTERS', 'WHITESPACE', 'EMPTY'], [_ANY, 'SLASH']];
+$QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTERS', 'WHITESPACE']], [_ANY, 'QUOTE']];
+//!!WHY IS THIS NOT DOING WHAT I THINK? :)
+//!!$QUOTED = ['QUOTE', [_OR, 'LETTERS', 'WHITESPACE', 'EMPTY']], [_ANY, 'QUOTE']];
 $TERM = [_SAVE, _OR, $WORD, $QUOTED, $REGEXLIKE];
 //$TERM = [_OR, $WORD, $REGEXLIKE];
 //$TERM = [_OR, $REGEXLIKE, $QUOTED];
@@ -161,12 +165,14 @@ test($s, 'egy ketto "ha rom" negy');
 echo "ACCENTED...<br>";
 
 test($s, 'egy /k ettő/ ket "h árom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
-test($s, 'qqqqqqq egy /k etto/ ddd"ddd dd"ddket "h arom"');
+test($s, 'qqqqqqq egy /k ettő/ ddd"ddd dd"ddket "h árom"');
 
 test($s, 'egy /ket/ "h /árom"');
 test($s, 'egy /k ettő ket "h árom');
 test($s, 'egy kettő három');
-test($s, 'egy kettő három nágy');
+test($s, 'egy kettő három négy');
 test($s, 'öt négy "há rom" kettő "egy');
 
 echo "Timing: " . (microtime(true) - $t1);
+
+//phpinfo();
