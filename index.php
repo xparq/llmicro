@@ -24,10 +24,8 @@ function test($syntax, $text)
 {
 	echo("<hr><pre>Testing: \"$text\"...</pre>");
 
-	Parser::$loopguard = MY_RECURSION_DEPTH;
-
 	$src = $text;
-	$res = Parser::match($src, $syntax);
+	$res = Parser::parse($src, $syntax, MY_RECURSION_DEPTH);
 	if ($res !== false) {
 		echo("<p style='color:green;'><b>MATCHED: '"
 				. mb_substr($text, 0, $res) ."'"
@@ -35,7 +33,10 @@ function test($syntax, $text)
 	} else {
 		echo("<p style='color:red;'>FAILED.</p>");
 	}
-	echo "<p>Recursion depth: " . (MY_RECURSION_DEPTH - Parser::$loopguard) . "</p>";
+	echo "<p>"
+	   . "Recursion depth: " . (MY_RECURSION_DEPTH - Parser::$depth_reached) . "<br>";
+	echo "Rules tried: " . Parser::$tries
+	   . "</p>";
 }
 
 //---------------------------------------------------------------------------

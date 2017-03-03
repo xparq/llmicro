@@ -1,12 +1,19 @@
-﻿* Cleanup and objectify to give it a nice & simple API!
-* Study a bit what the surprisingly deep recursion levels actually depend on,
-  and how could be optimized. (I read somewhere that if not proceeding forward
-  with matching a rule, then no recursion is needed. What to make of that?)
+﻿* Objectify to give it a nice & simple API? But I like the current "stateless"
+  version so much... (I'll need to measure it a bit at least.)
+
 * OPs and ATOMs should be merged?
 
 =============================================================================
 DONE:
 =============================================================================
+
++ Study a bit what the surprisingly deep recursion levels actually depend on,
+  and how could that be optimized. (I read somewhere that if not proceeding 
+  forward with matching a rule, then no recursion is needed. What to make of 
+  that?)
+
+  -> Umm, that was not the recursion level at all, but the total number of
+     rule-matching tried... So now I "optimized" that bug away...
 
 - Change it to only pass the start position, rather than new strings all the time!
   I tried, but the positions were strangely off, with an accumulating error,

@@ -20,6 +20,8 @@ define('_ANY'	, '*');	// 0 or more (greedy); shortcut to [_OR [_MANY X] EMPTY]; 
 //---------------------------------------------------------------------------
 class Parser
 {
+	const MAX_NESTING_LEVEL = 500;
+
 	// Operator functions...
 	// Populated later below, as:
 	//    $OP[_SOME-OP] = function($chunk, $rule) { ... return false or match-length; }
@@ -54,9 +56,11 @@ class Parser
 		'WHITESPACE' => '/^([\\p{Z}]+)/u',
 	];
 
-	// This is pretty lame as a static, but didn't want to move everything
-	// into instance scope just because of this one single diag. variable!
-	static $loopguard = 256; // Just a nice round default. Override for your case!
+	// I hate these to be static, but didn't want to turn everything
+	// into object scope just because of these diag. variables!
+	static $loopguard;
+	static $depth_reached;
+	static $tries;
 
 	//-------------------------------------------------------------------
 	static function atom($rule)	{ return isset(self::$ATOM[$rule]) ? self::$ATOM[$rule] : false; }
@@ -65,12 +69,23 @@ class Parser
 	static function constr($rule)	{ return is_array($rule) && !empty($rule); }
 
 	//-------------------------------------------------------------------
+	static function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
+	{
+		self::$loopguard = self::$depth_reached = $maxnest;
+		self::$tries = 0;
+		return self::match($text, $syntax);
+	}
+		
+	//-------------------------------------------------------------------
 	static function match($seq, $rule)
 	// $seq is the source text (a string).
 	// $rule is a syntax (tree) rule
 	// If $seq matches $rule, it returns the length of the match, otherwise false.
 	{
-		if (!--self::$loopguard) {
+		++self::$tries;
+		if (self::$depth_reached > --self::$loopguard)
+		    self::$depth_reached =   self::$loopguard;
+		if (!self::$loopguard) {
 			throw new Exception("--WTF? Infinite loop (in 'match()')!<br>\n");
 		}
 
@@ -100,7 +115,9 @@ class Parser
 			throw new Exception("--WTF? Broken syntax: " . print_r($rule, true));
 		}
 
-		return $f($seq, $rule);
+		$res = $f($seq, $rule);
+		++self::$loopguard;
+		return $res;
 	}
 }
 
