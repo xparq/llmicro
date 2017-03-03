@@ -1,29 +1,38 @@
 ﻿* Make the mb_* crap transparent.
 
-* Objectify to give it a nice & simple API? But I like the current "stateless"
-  version so much... (I'll need to measure it a bit at least.)
-
 * OPs and ATOMs should be merged?
 
 =============================================================================
 DONE:
 =============================================================================
 
++ Objectify for a nicer API + thread-safety! (But I like the current 
+  "stateless" version a lot... I'll need to measure it a bit at least.)
+   -> OK, no slowdown (even speedup, perhaps, due to dropping the earlier
+      substr logic!). As a bonus, the mb_* shit is now confined to two
+      well-isolated places.
+      Also: that "stateless" thing was just an illusion, the diagnostics
+      was real state, or else I should have deleted it... ;)
+
 + Study a bit what the surprisingly deep recursion levels actually depend on,
   and how could that be optimized. (I read somewhere that if not proceeding 
   forward with matching a rule, then no recursion is needed. What to make of 
   that?)
-
   -> Umm, that was not the recursion level at all, but the total number of
      rule-matching tried... So now I "optimized" that bug away...
 
 - Change it to only pass the start position, rather than new strings all the time!
-  I tried, but the positions were strangely off, with an accumulating error,
+
+  -> I tried, but the positions were strangely off, with an accumulating error,
   and I didn't feel like debugging it. Also: it required 
   `while(!empty($text[$pos]))` checks, and it reminded me again how this whole
   idea of directly indexing a string is not UTF8-safe at all anyway. The 
   other string functions like substr and strlen etc. at least have their 
   mb_... counterparts.
+
+    -> Message from the future: solved now (2017/03/03), and that horrid 
+       end-condition above is now also just a simple comparison against the 
+       length of the input.
 
 + !NOTE: The reported recursion levels even change depending *solely* on
   what the define('MAX_RECURSION_DEPTH', 115) is$! :-ooo Failing rules
@@ -31,6 +40,8 @@ DONE:
   That counter and the reporting stuff seems to be completely off, and 
   I just can't see where. :-o
   -> Hehh, ehhehe... Umm... Don't tell anyone, but it was *decremented* 
-     from from the initial max. rather than incrementing till the limit! :)
+     rather than incrementing it up to the limit! :)
 
-+ Try the grammars with the optional trailing marks in the tests!
++ Try the test grammar with the optional trailing markers!
+  -> Hmm, flaky, but kinda works, actually better than I thought. 
+     Can't even decide whether to leave it that way for good.
