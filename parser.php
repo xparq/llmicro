@@ -59,36 +59,44 @@ class Parser
 		'WHITESPACE' => '/^([\\p{Z}]+)/u',
 	];
 
-	// I hate these to be static, but didn't want to turn everything
-	// into object scope just because of these diag. variables!
-	static $loopguard;
-	static $depth_reached;
-	static $tries;
-
 	//-------------------------------------------------------------------
 	static function atom($rule)	{ return isset(self::$ATOM[$rule]) ? self::$ATOM[$rule] : false; }
 	static function op($rule)	{ return isset(self::$OP[$rule])   ? self::$OP[$rule]   : false; }
 	static function term($rule)	{ return is_string($rule); }
 	static function constr($rule)	{ return is_array($rule) && !empty($rule); }
 
+
 	//-------------------------------------------------------------------
-	static function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
+	// Parsing context
+	//
+	public $text; // input
+	public $text_length;
+	public $loopguard;
+	public $depth_reached;
+	public $tries;
+
+	//-------------------------------------------------------------------
+	public function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
 	{
-		self::$loopguard = self::$depth_reached = $maxnest;
-		self::$tries = 0;
-		return self::match($text, $syntax);
+		$this->text = $text;
+		$this->text_length = mb_strlen($text);
+		// diagnostics
+		$this->loopguard = $this->depth_reached = $maxnest;
+		$this->tries = 0;
+
+		return $this->match(0, $syntax);
 	}
-		
+
 	//-------------------------------------------------------------------
-	static function match($seq, $rule)
+	public function match($pos, $rule)
 	// $seq is the source text (a string).
 	// $rule is a syntax (tree) rule
 	// If $seq matches $rule, it returns the length of the match, otherwise false.
 	{
-		++self::$tries;
-		if (self::$depth_reached > --self::$loopguard)
-		    self::$depth_reached =   self::$loopguard;
-		if (!self::$loopguard) {
+		++$this->tries;
+		if ($this->depth_reached > --$this->loopguard)
+		    $this->depth_reached =   $this->loopguard;
+		if (!$this->loopguard) {
 			throw new Exception("--WTF? Infinite loop (in 'match()')!<br>\n");
 		}
 
@@ -123,16 +131,17 @@ class Parser
 			throw new Exception("--WTF? Broken syntax: " . print_r($rule, true));
 		}
 
-		$res = $f($seq, $rule);
-		++self::$loopguard;
+		$res = $f($this, $pos, $rule);
+		++$this->loopguard;
 		return $res;
 	}
 }
 
 //---------------------------------------------------------------------------
-Parser::$OP[_TERMINAL] = function($str, $rule)
+Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
 {
 //	assert(is_string($rule));
+	$str = mb_substr($p->text, $pos);
 	if (Parser::atom($rule)) // atom pattern?
 	{	
 		$m = [];
@@ -143,7 +152,7 @@ Parser::$OP[_TERMINAL] = function($str, $rule)
 		} else	return false;
 
 	}
-	else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') // "literal" regex pattern?
+	else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') // direct regex?
 	{
 //DBG(" -- match_term(): matching direct regex '$rule' against input: '$str'");
                 if (preg_match($rule, $str, $m)) {
@@ -162,32 +171,32 @@ Parser::$OP[_TERMINAL] = function($str, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_SEQ] = function($seq, $rule)
+Parser::$OP[_SEQ] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_seq() ");
 //	assert(is_array($rule));
-	$pos = 0;
+	$len = 0;
 	foreach ($rule as $r)
 	{
-//DBG(" -- match_seq($seq, rule): matching chunk '".mb_substr($seq, $pos)."' against rule: ".dump($rule));
-		if (($len = Parser::match(mb_substr($seq, $pos), $r)) !== false) {
-			$pos += $len;
+//DBG(" -- match_seq($p->text, rule): matching chunk '".mb_substr($p->text, $pos)."' against rule: ".dump($rule));
+		if (($l = $p->match($pos + $len, $r)) !== false) {
+			$len += $l;
 		} else	return false;
 	}
-	return $pos;
+	return $len;
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_OR] = function($seq, $rule)
+Parser::$OP[_OR] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_or() ");
 //	assert(is_array($rule));
 	foreach ($rule as $r)
 	{
 //DBG(" -- match_or(): matching rule: ". dump($r));
-		if (($pos = Parser::match($seq, $r)) !== false) {
+		if (($len = $p->match($pos, $r)) !== false) {
 //DBG(" -- match_or(): MATCH! (pos=$pos)");
-			return $pos;
+			return $len;
 		} else {
 //DBG(" -- match_or(): failed, skipping to next, if any...");
 			continue;
@@ -198,62 +207,62 @@ Parser::$OP[_OR] = function($seq, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_ANY] = function($seq, $rule)
+Parser::$OP[_ANY] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_any() ");
 //	assert(is_array($rule));
 	assert(count($rule) == 1);
 
-	$pos = 0;
+	$len = 0;
 	$r = $rule[0];
 	do {
-		$chunk = mb_substr($seq, $pos);
+//$chunk = mb_substr($p->text, $pos + $len);
 //DBG(" -- match_any(): iteration for '". $chunk ."'");
-		if (($len = Parser::match($chunk, $r)) === false) {
+		if (($l = $p->match($pos + $len, $r)) === false) {
 //DBG(" -- match_any(): received false!");
 			break;
 		} else {
-//DBG(" -- match_any(): received len: $len");
-			if ($len == 0) {
+//DBG(" -- match_any(): received len: $l");
+			if ($l == 0) {
 				throw new Exception("--WTF? Infinite loop (in _ANY)!");
 			}
-			$pos += $len;
+			$len += $l;
 		}
-	} while (!empty($chunk));
+	} while ($pos + $len < $p->text_length);
 
 //DBG(" -- match_any(): returning pos=$pos");
-	return $pos;
+	return $len;
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_MANY] = function($seq, $rule)
+Parser::$OP[_MANY] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_many_greedy() entered...");
 //	assert(is_array($rule));
 	assert(count($rule) == 1);
 
-	$pos = 0;
+	$len = 0;
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-		$chunk = mb_substr($seq, $pos);
+//$chunk = mb_substr($p->text, $pos + $len);
 //DBG(" -- match_many_greedy(): iteration for '". $chunk ."'");
-		if (($len = Parser::match($chunk, $r)) === false) {
+		if (($l = $p->match($pos + $len, $r)) === false) {
 //DBG(" -- match_many_greedy(): received false!");
 			break;
 		} else {
-//DBG(" -- match_many_greedy(): received len: $len");
+//DBG(" -- match_many_greedy(): received len: $l");
 			$at_least_one_match = true;
 			// We'd get stuck in an infinite loop if not progressing! :-o
-			if ($len == 0) {
+			if ($l == 0) {
 				throw new Exception("--WTF? Infinite loop (in _MANY)!");
 			}
-			$pos += $len;
+			$len += $l;
 		}
-	} while (!empty($chunk));
+	} while ($pos + $len < $p->text_length);
 
 //$res = $at_least_one_match ? $pos : false; //DBG();
 //if ($res == false) DBG(" -- match_many_greedy(): returning false");
 //else               DBG(" -- match_many_greedy(): returning pos=$pos");
-	return $at_least_one_match ? $pos : false;
+	return $at_least_one_match ? $len : false;
 };

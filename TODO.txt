@@ -1,4 +1,6 @@
-﻿* Objectify to give it a nice & simple API? But I like the current "stateless"
+﻿* Make the mb_* crap transparent.
+
+* Objectify to give it a nice & simple API? But I like the current "stateless"
   version so much... (I'll need to measure it a bit at least.)
 
 * OPs and ATOMs should be merged?

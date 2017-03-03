@@ -22,10 +22,14 @@ require $PARSER_SCRIPT;
 //---------------------------------------------------------------------------
 function test($syntax, $text)
 {
-	echo("<hr><pre>Testing: \"$text\"...</pre>");
+	static $test_case = 0;
 
-	$src = $text;
-	$res = Parser::parse($src, $syntax, MY_RECURSION_DEPTH);
+	echo "<hr><b>Test #" . ++$test_case . ":</b>";
+	echo "<pre>Input: \"$text\"...</pre>";
+
+	$p = new Parser();
+
+	$res = $p->parse($text, $syntax, MY_RECURSION_DEPTH);
 	if ($res !== false) {
 		echo("<p style='color:green;'><b>MATCHED: '"
 				. mb_substr($text, 0, $res) ."'"
@@ -34,19 +38,19 @@ function test($syntax, $text)
 		echo("<p style='color:red;'>FAILED.</p>");
 	}
 	echo "<p>"
-	   . "Recursion depth: " . (MY_RECURSION_DEPTH - Parser::$depth_reached) . "<br>";
-	echo "Rules tried: " . Parser::$tries
+	   . "Recursion depth: " . (MY_RECURSION_DEPTH - $p->depth_reached) . "<br>";
+	echo "Rules tried: " . $p->tries
 	   . "</p>";
 }
 
 //---------------------------------------------------------------------------
 // "Userland" demo:
 define('_SAVE' , '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y]
-Parser::$OP[_SAVE] = function($seq, $rule)
+Parser::$OP[_SAVE] = function(Parser $p, $pos, $rule)
 {
-	$res = Parser::match($seq, $rule);
-echo " [".mb_substr($seq, 0, $res) . "] ";
-	return $res;
+	$len = $p->match($pos, $rule);
+echo " [".mb_substr($p->text, $pos, $len) . "] ";
+	return $len;
 };
 
 
@@ -63,12 +67,14 @@ $wordlist = [_MANY,
 		], 
             ];
 */
-$WORD = 'LETTERS';
-//$WORD = '/^([^\\s\\"\\/]+)/';
-$REGEXLIKE = ['SLASH', [_ANY, [_OR, 'LETTERS', 'WHITESPACE']], [_ANY, 'SLASH']];
+//$WORD = 'LETTERS';
+$WORD = '/^([^\\s\\"\\/]+)/';
+//$REGEXLIKE = ['SLASH', [_ANY, [_OR, 'LETTERS', 'WHITESPACE']], [_ANY, 'SLASH']];
+$REGEXLIKE = ['SLASH', [_ANY, [_OR, $WORD, 'WHITESPACE']], [_ANY, 'SLASH']];
 //!!WHY IS THIS NOT DOING WHAT I THINK? :)
 //!!$REGEXLIKE = ['SLASH', [_OR, 'LETTERS', 'WHITESPACE', 'EMPTY'], [_ANY, 'SLASH']];
-$QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTERS', 'WHITESPACE']], [_ANY, 'QUOTE']];
+//$QUOTED = ['QUOTE', [_ANY, [_OR, 'LETTERS', 'WHITESPACE']], [_ANY, 'QUOTE']];
+$QUOTED = ['QUOTE', [_ANY, [_OR, $WORD, 'WHITESPACE']], [_ANY, 'QUOTE']];
 //!!WHY IS THIS NOT DOING WHAT I THINK? :)
 //!!$QUOTED = ['QUOTE', [_OR, 'LETTERS', 'WHITESPACE', 'EMPTY']], [_ANY, 'QUOTE']];
 $TERM = [_SAVE, _OR, $WORD, $QUOTED, $REGEXLIKE];

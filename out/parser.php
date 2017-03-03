@@ -1,8 +1,6 @@
 ﻿<?php
 /* 
-  A simplistic recursive descent LL parser for my own ad-hoc use.
-  (Note, it could be made tail-call-optimizable, giving up on the
-  current $OP[] function map. Alas, PHP can't do it yet, so no point...)
+  A simplistic recursive descent LL parser for simple, ad-hoc tasks
 */
 
 
@@ -56,36 +54,44 @@ class Parser
 		'WHITESPACE' => '/^([\\p{Z}]+)/u',
 	];
 
-	// I hate these to be static, but didn't want to turn everything
-	// into object scope just because of these diag. variables!
-	static $loopguard;
-	static $depth_reached;
-	static $tries;
-
 	//-------------------------------------------------------------------
 	static function atom($rule)	{ return isset(self::$ATOM[$rule]) ? self::$ATOM[$rule] : false; }
 	static function op($rule)	{ return isset(self::$OP[$rule])   ? self::$OP[$rule]   : false; }
 	static function term($rule)	{ return is_string($rule); }
 	static function constr($rule)	{ return is_array($rule) && !empty($rule); }
 
+
 	//-------------------------------------------------------------------
-	static function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
+	// Parsing context
+	//
+	public $text; // input
+	public $text_length;
+	public $loopguard;
+	public $depth_reached;
+	public $tries;
+
+	//-------------------------------------------------------------------
+	public function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
 	{
-		self::$loopguard = self::$depth_reached = $maxnest;
-		self::$tries = 0;
-		return self::match($text, $syntax);
+		$this->text = $text;
+		$this->text_length = mb_strlen($text);
+		// diagnostics
+		$this->loopguard = $this->depth_reached = $maxnest;
+		$this->tries = 0;
+
+		return $this->match(0, $syntax);
 	}
-		
+
 	//-------------------------------------------------------------------
-	static function match($seq, $rule)
+	public function match($pos, $rule)
 	// $seq is the source text (a string).
 	// $rule is a syntax (tree) rule
 	// If $seq matches $rule, it returns the length of the match, otherwise false.
 	{
-		++self::$tries;
-		if (self::$depth_reached > --self::$loopguard)
-		    self::$depth_reached =   self::$loopguard;
-		if (!self::$loopguard) {
+		++$this->tries;
+		if ($this->depth_reached > --$this->loopguard)
+		    $this->depth_reached =   $this->loopguard;
+		if (!$this->loopguard) {
 			throw new Exception("--WTF? Infinite loop (in 'match()')!<br>\n");
 		}
 
@@ -115,15 +121,16 @@ class Parser
 			throw new Exception("--WTF? Broken syntax: " . print_r($rule, true));
 		}
 
-		$res = $f($seq, $rule);
-		++self::$loopguard;
+		$res = $f($this, $pos, $rule);
+		++$this->loopguard;
 		return $res;
 	}
 }
 
 //---------------------------------------------------------------------------
-Parser::$OP[_TERMINAL] = function($str, $rule)
+Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
 {
+	$str = mb_substr($p->text, $pos);
 	if (Parser::atom($rule)) // atom pattern?
 	{	
 		$m = [];
@@ -132,7 +139,7 @@ Parser::$OP[_TERMINAL] = function($str, $rule)
 		} else	return false;
 
 	}
-	else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') // "literal" regex pattern?
+	else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') // direct regex?
 	{
                 if (preg_match($rule, $str, $m)) {
 			return mb_strlen($m[1]);
@@ -148,25 +155,25 @@ Parser::$OP[_TERMINAL] = function($str, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_SEQ] = function($seq, $rule)
+Parser::$OP[_SEQ] = function(Parser $p, $pos, $rule)
 {
-	$pos = 0;
+	$len = 0;
 	foreach ($rule as $r)
 	{
-		if (($len = Parser::match(mb_substr($seq, $pos), $r)) !== false) {
-			$pos += $len;
+		if (($l = $p->match($pos + $len, $r)) !== false) {
+			$len += $l;
 		} else	return false;
 	}
-	return $pos;
+	return $len;
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_OR] = function($seq, $rule)
+Parser::$OP[_OR] = function(Parser $p, $pos, $rule)
 {
 	foreach ($rule as $r)
 	{
-		if (($pos = Parser::match($seq, $r)) !== false) {
-			return $pos;
+		if (($len = $p->match($pos, $r)) !== false) {
+			return $len;
 		} else {
 			continue;
 		}
@@ -175,48 +182,48 @@ Parser::$OP[_OR] = function($seq, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_ANY] = function($seq, $rule)
+Parser::$OP[_ANY] = function(Parser $p, $pos, $rule)
 {
 	assert(count($rule) == 1);
 
-	$pos = 0;
+	$len = 0;
 	$r = $rule[0];
 	do {
-		$chunk = mb_substr($seq, $pos);
-		if (($len = Parser::match($chunk, $r)) === false) {
+//$chunk = mb_substr($p->text, $pos + $len);
+		if (($l = $p->match($pos + $len, $r)) === false) {
 			break;
 		} else {
-			if ($len == 0) {
+			if ($l == 0) {
 				throw new Exception("--WTF? Infinite loop (in _ANY)!");
 			}
-			$pos += $len;
+			$len += $l;
 		}
-	} while (!empty($chunk));
+	} while ($pos + $len < $p->text_length);
 
-	return $pos;
+	return $len;
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_MANY] = function($seq, $rule)
+Parser::$OP[_MANY] = function(Parser $p, $pos, $rule)
 {
 	assert(count($rule) == 1);
 
-	$pos = 0;
+	$len = 0;
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-		$chunk = mb_substr($seq, $pos);
-		if (($len = Parser::match($chunk, $r)) === false) {
+//$chunk = mb_substr($p->text, $pos + $len);
+		if (($l = $p->match($pos + $len, $r)) === false) {
 			break;
 		} else {
 			$at_least_one_match = true;
 			// We'd get stuck in an infinite loop if not progressing! :-o
-			if ($len == 0) {
+			if ($l == 0) {
 				throw new Exception("--WTF? Infinite loop (in _MANY)!");
 			}
-			$pos += $len;
+			$len += $l;
 		}
-	} while (!empty($chunk));
+	} while ($pos + $len < $p->text_length);
 
-	return $at_least_one_match ? $pos : false;
+	return $at_least_one_match ? $len : false;
 };
