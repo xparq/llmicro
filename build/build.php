@@ -1,8 +1,8 @@
 ﻿<?php
 
-$INFILE  =     "parser.php";
+$INFILE = "parser.php";
 $OUTFILE = "out/parser.php";
-$TESTFILE = "index.php";
+$TESTFILE = "test.php";
 
 // Syntax-check:
 

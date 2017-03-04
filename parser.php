@@ -24,8 +24,7 @@ class Parser
 	const _MANY	= '+';	// 1 or more (greedy); must be followed by exactly 1 rule
 	const _ANY	= '*';	// 0 or more (greedy); shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
 	                        // "greedy" (above) means that [A...]A will never match!
-	//!!NOT IMPLEMENTED:
-	//define('_ONE_OR_NONE', '?');// 0 or 1; must be followed by exactly 1 rule
+//!!	const _OPT      = '?';  // 0 or 1; must be followed by exactly 1 rule
 
 	// Operator functions...
 	// Populated later below, as:
@@ -58,8 +57,8 @@ class Parser
 		'DIGITS'     => '/^([\\p{N}]+)/u',
 		'LETTER'     => '/^([\\p{L}])/u',
 		'LETTERS'    => '/^([\\p{L}]+)/u',
-		'ALPHANUM'   => '/^([[:alnum:]])/u',
-		'ALPHANUMS'  => '/^([[:alnum:]]+)/u',
+		'ALNUM'      => '/^([[:alnum:]])/u',
+		'ALNUMS'     => '/^([[:alnum:]]+)/u',
 		'WHITESPACE' => '/^([\\p{Z}])/u',
 		'WHITESPACES'=> '/^([\\p{Z}]+)/u',
 	];
@@ -80,7 +79,8 @@ class Parser
 	// diagnostics:
 	public $loopguard;
 	public $depth_reached;
-	public $tries; //!!RENAME to something reasonable!
+	public $rules_tried;
+	public $terminals_tried;
 
 	//-------------------------------------------------------------------
 	public function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
@@ -89,7 +89,8 @@ class Parser
 		$this->text_length = mb_strlen($text);
 		// diagnostics
 		$this->loopguard = $this->depth_reached = $maxnest;
-		$this->tries = 0;
+		$this->rules_tried = 0;
+		$this->terminals_tried = 0;
 
 		return $this->match(0, $syntax);
 	}
@@ -100,7 +101,7 @@ class Parser
 	// $rule is a syntax (tree) rule
 	// If $seq matches $rule, it returns the length of the match, otherwise false.
 	{
-		++$this->tries;
+		++$this->rules_tried;
 		if ($this->depth_reached > --$this->loopguard)
 		    $this->depth_reached =   $this->loopguard;
 		if (!$this->loopguard) {
@@ -111,7 +112,7 @@ class Parser
 
 		if (self::term($rule)) // Terminal rule: atom or literal pattern.
 		{
-//DBG(" --> terminal rule: ".dump($rule));
+DBG(" --> terminal rule: ".dump($rule));
 			$f = self::op(self::_TERMINAL);
 		}
 		else if (self::constr($rule))
@@ -126,7 +127,7 @@ class Parser
 			}
 
 			$f = self::op($op);
-//DBG(" --> complex rule: type '$op', for rule: "
+DBG(" --> complex rule: type '$op', for rule: "
 	.dump($rule) //DBG()
 ); //DBG()
 			if (!$f) {
@@ -148,6 +149,8 @@ class Parser
 Parser::$OP[Parser::_TERMINAL] = function(Parser $p, $pos, $rule)
 {
 //	assert(is_string($rule));
+	++$p->terminals_tried;
+
 	$str = mb_substr($p->text, $pos);
 	if (Parser::atom($rule)) // atom pattern?
 	{	
@@ -195,40 +198,40 @@ Parser::$OP[Parser::_SEQ] = function(Parser $p, $pos, $rule)
 //---------------------------------------------------------------------------
 Parser::$OP[Parser::_OR] = function(Parser $p, $pos, $rule)
 {
-//DBG(" -- match_or() ");
+DBG(" -- match_or() ");
 //	assert(is_array($rule));
 	foreach ($rule as $r)
 	{
-//DBG(" -- match_or(): matching rule: ". dump($r));
+DBG(" -- match_or(): matching rule: ". dump($r));
 		if (($len = $p->match($pos, $r)) !== false) {
-//DBG(" -- match_or(): MATCH! (pos=$pos)");
+DBG(" -- match_or(): MATCH! (pos=$pos)");
 			return $len;
 		} else {
-//DBG(" -- match_or(): failed, skipping to next, if any...");
+DBG(" -- match_or(): failed, skipping to next, if any...");
 			continue;
 		}
 	}
-//DBG(" -- match_or(): returning false");
+DBG(" -- match_or(): returning false");
 	return false;
 };
 
 //---------------------------------------------------------------------------
 Parser::$OP[Parser::_ANY] = function(Parser $p, $pos, $rule)
 {
-//DBG(" -- match_any() ");
+DBG(" -- match_any() ");
 	assert(is_array($rule));
 	assert(count($rule) == 1);
 
 	$len = 0;
 	$r = $rule[0];
 	do {
-//$chunk = mb_substr($p->text, $pos + $len);//DBG()
-//DBG(" -- match_any(): iteration for '". $chunk ."'");
+$chunk = mb_substr($p->text, $pos + $len);//DBG()
+DBG(" -- match_any(): iteration for '". $chunk ."'");
 		if (($l = $p->match($pos + $len, $r)) === false) {
-//DBG(" -- match_any(): received false!");
+DBG(" -- match_any(): received false!");
 			break;
 		} else {
-//DBG(" -- match_any(): received len: $l");
+DBG(" -- match_any(): received len: $l");
 			if ($l == 0) {
 				throw new Exception("--WTF? Infinite loop (in _ANY)!");
 			}
@@ -236,7 +239,7 @@ Parser::$OP[Parser::_ANY] = function(Parser $p, $pos, $rule)
 		}
 	} while ($pos + $len < $p->text_length);
 
-//DBG(" -- match_any(): returning pos=$pos");
+DBG(" -- match_any(): returning pos=$pos");
 	return $len;
 };
 

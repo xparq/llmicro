@@ -5,24 +5,25 @@
 
 
 //---------------------------------------------------------------------------
-// Operator keywords...
-// Can be extended by clients at will (in sync with the Parser::$OP map below).
-define('_TERMINAL', '#');// Implicit, internal operation, defined here only for a more uniform match()
-define('_SEQ'	, ',');	// Default for just listing rules.
-define('_OR'	, '|');
-define('_MANY'	, '+');	// 1 or more (greedy); must be followed by exactly 1 rule
-define('_ANY'	, '*');	// 0 or more (greedy); shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
-//!!NOT IMPLEMENTED:
-//define('_ONE_OR_NONE', '?');// 0 or 1; must be followed by exactly 1 rule
-
-//---------------------------------------------------------------------------
 class Parser
 {
 	const MAX_NESTING_LEVEL = 500;
 
+	//---------------------------------------------------------------------------
+	// Operators/rules...
+	//
+	// Can be extended by users at will (in sync with the ::$OP map below).
+	const _TERMINAL = '#';  // Implicit internal operation, defined here only for a more uniform match()
+	const _SEQ	= ',';	// Default when just listing rules.
+	const _OR	= '|';
+	const _MANY	= '+';	// 1 or more (greedy); must be followed by exactly 1 rule
+	const _ANY	= '*';	// 0 or more (greedy); shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
+	                        // "greedy" (above) means that [A...]A will never match!
+//!!	const _OPT      = '?';  // 0 or 1; must be followed by exactly 1 rule
+
 	// Operator functions...
 	// Populated later below, as:
-	//    $OP[_SOME-OP] = function($chunk, $rule) { ... return false or match-length; }
+	//    Parser::$OP[Parser::_SOME-OP] = function($parser, $input_pos, $rule) { ... return false or match-length; }
 	// Can be extended by clients at will (in sync with the keyword list above).
 	static $OP = [];
 
@@ -42,7 +43,7 @@ class Parser
 		'TAB'        => '/^(\\t)/',
 		'QUOTE'      => '/^(\\")/',
 		'APOSTROPHE' => "/^(')/",
-		'SLASH'      => '~^(\\/)~',
+		'SLASH'      => '/^(\\/)/',
 		'IDCHAR'     => '/^([\\w])/', // [a-zA-Z0-9_], I guess
 		'ID'         => '/^([\\w]+)/',
 		'HEX'        => '/^([\\0-9a-fA-F])/',
@@ -51,7 +52,10 @@ class Parser
 		'DIGITS'     => '/^([\\p{N}]+)/u',
 		'LETTER'     => '/^([\\p{L}])/u',
 		'LETTERS'    => '/^([\\p{L}]+)/u',
-		'WHITESPACE' => '/^([\\p{Z}]+)/u',
+		'ALNUM'      => '/^([[:alnum:]])/u',
+		'ALNUMS'     => '/^([[:alnum:]]+)/u',
+		'WHITESPACE' => '/^([\\p{Z}])/u',
+		'WHITESPACES'=> '/^([\\p{Z}]+)/u',
 	];
 
 	//-------------------------------------------------------------------
@@ -62,13 +66,16 @@ class Parser
 
 
 	//-------------------------------------------------------------------
-	// Parsing context
+	// Parser state...
 	//
-	public $text; // input
+	// input:
+	public $text;
 	public $text_length;
+	// diagnostics:
 	public $loopguard;
 	public $depth_reached;
-	public $tries;
+	public $rules_tried;
+	public $terminals_tried;
 
 	//-------------------------------------------------------------------
 	public function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
@@ -77,7 +84,8 @@ class Parser
 		$this->text_length = mb_strlen($text);
 		// diagnostics
 		$this->loopguard = $this->depth_reached = $maxnest;
-		$this->tries = 0;
+		$this->rules_tried = 0;
+		$this->terminals_tried = 0;
 
 		return $this->match(0, $syntax);
 	}
@@ -88,7 +96,7 @@ class Parser
 	// $rule is a syntax (tree) rule
 	// If $seq matches $rule, it returns the length of the match, otherwise false.
 	{
-		++$this->tries;
+		++$this->rules_tried;
 		if ($this->depth_reached > --$this->loopguard)
 		    $this->depth_reached =   $this->loopguard;
 		if (!$this->loopguard) {
@@ -98,7 +106,7 @@ class Parser
 
 		if (self::term($rule)) // Terminal rule: atom or literal pattern.
 		{
-			$f = self::op(_TERMINAL);
+			$f = self::op(self::_TERMINAL);
 		}
 		else if (self::constr($rule))
 		{
@@ -108,7 +116,7 @@ class Parser
 				$op = $rule[0];
 				array_shift($rule); // eat it
 			} else {
-				$op = _SEQ;
+				$op = self::_SEQ;
 			}
 
 			$f = self::op($op);
@@ -128,8 +136,10 @@ class Parser
 }
 
 //---------------------------------------------------------------------------
-Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_TERMINAL] = function(Parser $p, $pos, $rule)
 {
+	++$p->terminals_tried;
+
 	$str = mb_substr($p->text, $pos);
 	if (Parser::atom($rule)) // atom pattern?
 	{	
@@ -143,7 +153,6 @@ Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
 	{
                 if (preg_match($rule, $str, $m)) {
 			return mb_strlen($m[1]);
-//			return $m[1];
 		} else	return false;
 	}
 	else // literal non-pattern
@@ -155,7 +164,7 @@ Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_SEQ] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_SEQ] = function(Parser $p, $pos, $rule)
 {
 	$len = 0;
 	foreach ($rule as $r)
@@ -168,7 +177,7 @@ Parser::$OP[_SEQ] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_OR] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_OR] = function(Parser $p, $pos, $rule)
 {
 	foreach ($rule as $r)
 	{
@@ -182,14 +191,14 @@ Parser::$OP[_OR] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_ANY] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_ANY] = function(Parser $p, $pos, $rule)
 {
+	assert(is_array($rule));
 	assert(count($rule) == 1);
 
 	$len = 0;
 	$r = $rule[0];
 	do {
-//$chunk = mb_substr($p->text, $pos + $len);
 		if (($l = $p->match($pos + $len, $r)) === false) {
 			break;
 		} else {
@@ -204,7 +213,7 @@ Parser::$OP[_ANY] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_MANY] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_MANY] = function(Parser $p, $pos, $rule)
 {
 	assert(count($rule) == 1);
 
@@ -212,7 +221,6 @@ Parser::$OP[_MANY] = function(Parser $p, $pos, $rule)
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-//$chunk = mb_substr($p->text, $pos + $len);
 		if (($l = $p->match($pos + $len, $r)) === false) {
 			break;
 		} else {

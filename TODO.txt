@@ -1,6 +1,15 @@
-﻿* Make the mb_* crap transparent.
+﻿* Rename the class from Parser to something less intrusive! (Like LLMicro?...)
+
+* Make the mb_* crap transparent. Rather fail with Unicode inputs if no 
+  mbstring, than require mbstring when no Unicode inputs!
 
 * OPs and ATOMs should be merged?
+
+* The """ and """" test constructs don't do what I thought they did.
+  (See test #20, #21.)
+  Find an easy fix for them to mean QUOTED(") and QUOTED("")!
+
+* AST!
 
 =============================================================================
 DONE:
