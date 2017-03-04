@@ -6,28 +6,30 @@
 //---------------------------------------------------------------------------//DBG()
 // Throwaway utilities... (filtered out by the build script)                 //DBG()
 //---------------------------------------------------------------------------//DBG()
-//function dump($mixed) { return "<pre style='margin:0 0 0 2em; background:#ffff90;'>" . print_r($mixed, true) . "</pre>"; }//DBG()
-//function DBG($msg) { global $DBG; if (!$DBG) return; echo $msg ."<br>\n"; }//DBG()
-
-//---------------------------------------------------------------------------
-// Operator keywords...
-// Can be extended by clients at will (in sync with the Parser::$OP map below).
-define('_TERMINAL', '#');// Implicit, internal operation, defined here only for a more uniform match()
-define('_SEQ'	, ',');	// Default for just listing rules.
-define('_OR'	, '|');
-define('_MANY'	, '+');	// 1 or more (greedy); must be followed by exactly 1 rule
-define('_ANY'	, '*');	// 0 or more (greedy); shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
-//!!NOT IMPLEMENTED:
-//define('_ONE_OR_NONE', '?');// 0 or 1; must be followed by exactly 1 rule
+function dump($mixed) { return "<pre style='margin:0 0 0 2em; background:#ffff90;'>" . print_r($mixed, true) . "</pre>"; }//DBG()
+function DBG($msg) { global $DBG; if (!$DBG) return; echo $msg ."<br>\n"; }//DBG()
 
 //---------------------------------------------------------------------------
 class Parser
 {
 	const MAX_NESTING_LEVEL = 500;
 
+	//---------------------------------------------------------------------------
+	// Operators/rules...
+	//
+	// Can be extended by users at will (in sync with the ::$OP map below).
+	const _TERMINAL = '#';  // Implicit internal operation, defined here only for a more uniform match()
+	const _SEQ	= ',';	// Default when just listing rules.
+	const _OR	= '|';
+	const _MANY	= '+';	// 1 or more (greedy); must be followed by exactly 1 rule
+	const _ANY	= '*';	// 0 or more (greedy); shortcut to [_OR [_MANY X] EMPTY]; must be followed by exactly 1 rule
+	                        // "greedy" (above) means that [A...]A will never match!
+	//!!NOT IMPLEMENTED:
+	//define('_ONE_OR_NONE', '?');// 0 or 1; must be followed by exactly 1 rule
+
 	// Operator functions...
 	// Populated later below, as:
-	//    $OP[_SOME-OP] = function($chunk, $rule) { ... return false or match-length; }
+	//    Parser::$OP[Parser::_SOME-OP] = function($parser, $input_pos, $rule) { ... return false or match-length; }
 	// Can be extended by clients at will (in sync with the keyword list above).
 	static $OP = [];
 
@@ -47,7 +49,7 @@ class Parser
 		'TAB'        => '/^(\\t)/',
 		'QUOTE'      => '/^(\\")/',
 		'APOSTROPHE' => "/^(')/",
-		'SLASH'      => '~^(\\/)~',
+		'SLASH'      => '/^(\\/)/',
 		'IDCHAR'     => '/^([\\w])/', // [a-zA-Z0-9_], I guess
 		'ID'         => '/^([\\w]+)/',
 		'HEX'        => '/^([\\0-9a-fA-F])/',
@@ -56,7 +58,10 @@ class Parser
 		'DIGITS'     => '/^([\\p{N}]+)/u',
 		'LETTER'     => '/^([\\p{L}])/u',
 		'LETTERS'    => '/^([\\p{L}]+)/u',
-		'WHITESPACE' => '/^([\\p{Z}]+)/u',
+		'ALPHANUM'   => '/^([[:alnum:]])/u',
+		'ALPHANUMS'  => '/^([[:alnum:]]+)/u',
+		'WHITESPACE' => '/^([\\p{Z}])/u',
+		'WHITESPACES'=> '/^([\\p{Z}]+)/u',
 	];
 
 	//-------------------------------------------------------------------
@@ -67,13 +72,15 @@ class Parser
 
 
 	//-------------------------------------------------------------------
-	// Parsing context
+	// Parser state...
 	//
-	public $text; // input
+	// input:
+	public $text;
 	public $text_length;
+	// diagnostics:
 	public $loopguard;
 	public $depth_reached;
-	public $tries;
+	public $tries; //!!RENAME to something reasonable!
 
 	//-------------------------------------------------------------------
 	public function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
@@ -100,12 +107,12 @@ class Parser
 			throw new Exception("--WTF? Infinite loop (in 'match()')!<br>\n");
 		}
 
-//DBG("match(): input '".$seq."' against rule: ".dump($rule));
+//DBG("match(): input '".mb_substr($this->text, $pos)."' against rule: ".dump($rule));
 
 		if (self::term($rule)) // Terminal rule: atom or literal pattern.
 		{
 //DBG(" --> terminal rule: ".dump($rule));
-			$f = self::op(_TERMINAL);
+			$f = self::op(self::_TERMINAL);
 		}
 		else if (self::constr($rule))
 		{
@@ -115,13 +122,13 @@ class Parser
 				$op = $rule[0];
 				array_shift($rule); // eat it
 			} else {
-				$op = _SEQ;
+				$op = self::_SEQ;
 			}
 
 			$f = self::op($op);
 //DBG(" --> complex rule: type '$op', for rule: "
-//.dump($rule) //DBG()
-//); //DBG()
+	.dump($rule) //DBG()
+); //DBG()
 			if (!$f) {
 				throw new Exception("--WTF? Unknown operator: '$op'!");
 			}
@@ -138,7 +145,7 @@ class Parser
 }
 
 //---------------------------------------------------------------------------
-Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_TERMINAL] = function(Parser $p, $pos, $rule)
 {
 //	assert(is_string($rule));
 	$str = mb_substr($p->text, $pos);
@@ -158,7 +165,6 @@ Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
                 if (preg_match($rule, $str, $m)) {
 //DBG(" -- match_term(): MATCH! [$m[1]]");
 			return mb_strlen($m[1]);
-//			return $m[1];
 		} else	return false;
 	}
 	else // literal non-pattern
@@ -171,7 +177,7 @@ Parser::$OP[_TERMINAL] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_SEQ] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_SEQ] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_seq() ");
 //	assert(is_array($rule));
@@ -187,7 +193,7 @@ Parser::$OP[_SEQ] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_OR] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_OR] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_or() ");
 //	assert(is_array($rule));
@@ -207,16 +213,16 @@ Parser::$OP[_OR] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_ANY] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_ANY] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_any() ");
-//	assert(is_array($rule));
+	assert(is_array($rule));
 	assert(count($rule) == 1);
 
 	$len = 0;
 	$r = $rule[0];
 	do {
-//$chunk = mb_substr($p->text, $pos + $len);
+//$chunk = mb_substr($p->text, $pos + $len);//DBG()
 //DBG(" -- match_any(): iteration for '". $chunk ."'");
 		if (($l = $p->match($pos + $len, $r)) === false) {
 //DBG(" -- match_any(): received false!");
@@ -235,7 +241,7 @@ Parser::$OP[_ANY] = function(Parser $p, $pos, $rule)
 };
 
 //---------------------------------------------------------------------------
-Parser::$OP[_MANY] = function(Parser $p, $pos, $rule)
+Parser::$OP[Parser::_MANY] = function(Parser $p, $pos, $rule)
 {
 //DBG(" -- match_many_greedy() entered...");
 //	assert(is_array($rule));
@@ -245,7 +251,7 @@ Parser::$OP[_MANY] = function(Parser $p, $pos, $rule)
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-//$chunk = mb_substr($p->text, $pos + $len);
+//$chunk = mb_substr($p->text, $pos + $len);//DBG()
 //DBG(" -- match_many_greedy(): iteration for '". $chunk ."'");
 		if (($l = $p->match($pos + $len, $r)) === false) {
 //DBG(" -- match_many_greedy(): received false!");
