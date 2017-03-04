@@ -12,7 +12,7 @@ function DBG($msg) { global $DBG; if (!$DBG) return; echo $msg ."<br>\n"; }//DBG
 //---------------------------------------------------------------------------
 class Parser
 {
-	const MAX_NESTING_LEVEL = 500;
+	const DEFAULT_RECURSION_LIMIT = 500;
 
 	//---------------------------------------------------------------------------
 	// Operators/rules...
@@ -83,7 +83,7 @@ class Parser
 	public $terminals_tried;
 
 	//-------------------------------------------------------------------
-	public function parse($text, $syntax, $maxnest = self::MAX_NESTING_LEVEL)
+	public function parse($text, $syntax, $maxnest = self::DEFAULT_RECURSION_LIMIT)
 	{
 		$this->text = $text;
 		$this->text_length = mb_strlen($text);
