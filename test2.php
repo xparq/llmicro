@@ -11,19 +11,19 @@ define('_SAVE_R' , '_R');
 Parser::$OP[_SAVE] = function(Parser $p, $pos, $rule)
 {
 	$len = $p->match($pos, $rule);
-	if ($len !== false) echo " [".mb_substr($p->text, $pos, $len) . "] ";
+	if ($len !== false) echo " [".substr($p->text, $pos, $len) . "] ";
 	return $len;
 };
 Parser::$OP[_SAVE_Q] = function(Parser $p, $pos, $rule)
 {
 	$len = $p->match($pos, $rule);
-	if ($len !== false) echo " \"".mb_substr($p->text, $pos, $len) . "\" ";
+	if ($len !== false) echo " \"".substr($p->text, $pos, $len) . "\" ";
 	return $len;
 };
 Parser::$OP[_SAVE_R] = function(Parser $p, $pos, $rule)
 {
 	$len = $p->match($pos, $rule);
-	if ($len !== false) echo " ~".mb_substr($p->text, $pos, $len) . "~ ";
+	if ($len !== false) echo " ~".substr($p->text, $pos, $len) . "~ ";
 	return $len;
 };
 
@@ -43,7 +43,7 @@ $wordlist = [_MANY,
 */
 //---------------------------------------------------------------------------
 //$WORD = 'LETTERS';
-$WORD = '/^([^\\s\\"\\/]+)/';
+$WORD = '/[^\\s\\"\\/]+/';
 //$REGEXLIKE = ['SLASH', [Parser::_ANY, [Parser::_OR, 'LETTERS', 'WHITESPACES']], [Parser::_ANY, 'SLASH']];
 $REGEXLIKE = ['SLASH', [_SAVE_R, Parser::_ANY, [Parser::_OR, $WORD, 'WHITESPACES']], [Parser::_ANY, 'SLASH']];
 //!!WHY IS THIS NOT DOING WHAT I THINK? :)
@@ -85,39 +85,39 @@ test($s, " egy  ");
 test($s, "  x  ");
 test($s, "  egy  ");
 
-echo "PHRASE...<br>";
+echo "<h1>PHRASE...</h1>";
 
-test($s, "egy ketto");
-test($s, "egy ket ha");
-test($s, " egy ket ");
+test($s, "egy kettő");
+test($s, "egy két há");
+test($s, " egy két ");
 test($s, "a ! b");
 
-echo "REX...<br>";
+echo "<h1>REX...</h1>";
 
 test($s, "/");
 test($s, "//");
 test($s, "/x/");
 test($s, " /x/");
 test($s, "/x");
-test($s, '/ket to/');
-test($s, '/ketto/ "harom"');
-test($s, '/k etto/ "h arom"');
+test($s, '/ket tő/');
+test($s, '/kettő/ "három"');
+test($s, '/k ettő/ "h árom"');
 
-echo "QUOTED...<br>";
+echo "<h1>QUOTED...</h1>";
 
 test($s, '"');
 test($s, '""');
 test($s, '"x"');
 test($s, ' "x"');
 test($s, '"x');
-test($s, '"ket to"');
-test($s, '"ketto" "harom"');
-test($s, '"k etto" "h arom"');
+test($s, '"ket tő"');
+test($s, '"kettő" "három"');
+test($s, '"k ettő" "h árom"');
 
-echo "MIXED...<br>";
+echo "<h1>MIXED...</h1>";
 
-test($s, "egy /ket to/");
-test($s, "egy /ketto/ \"harom\"");
+test($s, "egy /ket tő/");
+test($s, "egy /kettő/ \"három\"");
 test($s, 'a "b" c');
 test($s, 'a b "c');
 test($s, '/k/ e');
@@ -133,24 +133,24 @@ test($s, 'e /k/ "h"');
 test($s, 'w /r/ w "q"');
 test($s, 'w w /r r/ w w "q q"');
 
-echo "REAL-WORLD EXAMPLES...<br>";
+echo "<h1>REAL-WORLD EXAMPLES...</h1>";
 
-test($s, 'egy /k etto/ ket "h arom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
-test($s, 'qqqqqqq egy /k etto/ ddd"ddd dd"ddket "h arom"');
+test($s, 'egy /k ettő/ két "h árom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
+test($s, 'qqqqqqq egy /k ettő/ ddd"ddd dd"ddkét "h árom"');
 
-test($s, 'egy /ket/ "h /arom"');
-test($s, 'egy /k etto ket "h arom');
-test($s, 'egy ketto harom');
-test($s, 'egy ketto harom negy');
-test($s, 'egy ketto "ha rom" negy');
-
-echo "ACCENTED...<br>";
-
-test($s, 'egy /k ettő/ ket "h árom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
-test($s, 'qqqqqqq egy /k ettő/ ddd"ddd dd"ddket "h árom"');
-
-test($s, 'egy /ket/ "h /árom"');
-test($s, 'egy /k ettő ket "h árom');
+test($s, 'egy /két/ "h /árom"');
+test($s, 'egy /k ettő két "h árom');
 test($s, 'egy kettő három');
 test($s, 'egy kettő három négy');
+test($s, 'egy kettő "há rom" négy');
+
+echo "<h1>MORE ACCENTED...</h1>";
+
+test($s, 'négy /k ettő/ két "h árom"');	// recursion depth 105 with array model, and 74 with the string model! :-o
+test($s, 'ŐqqqqŰ egy /k ettő/ ddd"ddd dd"ddkét "h árom"');
+
+test($s, 'négy /két/ "h /árom"');
+test($s, 'négy /k ettő ket "h árom');
+test($s, 'négy kettő három');
+test($s, 'négy kettő három négy');
 test($s, 'öt négy "há rom" kettő "egy');

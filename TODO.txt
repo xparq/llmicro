@@ -1,12 +1,4 @@
-﻿* Make the mb_* crap transparent. Rather fail with Unicode inputs if no 
-  mbstring, than require mbstring when no Unicode inputs!
-  ! Even better: try to eliminate all the mb_... crap and go by the 
-    binary positions, using preg_match(..., OFFSET_CAPTURE, $pos)!
-    But careful: this may not just be 100% possible! And "userland"
-    may get confused about being UTF-8 safe and *still* feeding them
-    with byte positions! It may even cause unsolvable problems to them!
-    ! Note: preg_match(/^.../, OFFSET_CAPTURE, pos) will NEVER match! :-o
-      Must omit ^ and check pos == offset instead!
+﻿* Proper docs!
 
 * OPs and ATOMs should be merged?
 
@@ -25,6 +17,20 @@
 =============================================================================
 DONE:
 =============================================================================
+
++ Make the mb_* crap transparent. Rather fail with Unicode inputs if no 
+  mbstring, than require mbstring when no Unicode inputs!
+  + Even better: try to eliminate all the mb_... crap and go by the 
+    byte positions, using preg_match(..., OFFSET_CAPTURE, $pos) and the
+    plain str functions! (Remember: UTF-8 strings have no embedded 0s!)
+    But careful: this may not be 100% possible! And "userland" may
+    get confused about being UTF-8 safe and *still* feeding seeing the
+    byte positions! Might it even cause unsolvable problems to them?
+    -> Note: preg_match(/^.../, OFFSET_CAPTURE, pos) will NEVER match! :-o
+       + Must omit ^ from all the patterns and check pos == offset instead!
+    + BTW, another missing link is determining the *length* of the matched 
+      portion (not the position of the start of the match, that's OK).
+      + Just doing an extra strlen() there now, having no better idea.
 
 + Objectify for a nicer API + thread-safety! (But I like the current 
   "stateless" version a lot... I'll need to measure it a bit at least.)

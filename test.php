@@ -32,7 +32,7 @@ function test($syntax, $text)
 	$res = $p->parse($text, $syntax, MY_RECURSION_DEPTH);
 	if ($res !== false) {
 		echo("<p style='color:green;'><b>MATCHED: '"
-				. mb_substr($text, 0, $res) ."'"
+				. substr($text, 0, $res) ."'"
 				."</b></p>\n");
 	} else {
 		echo("<p style='color:red;'>FAILED.</p>");

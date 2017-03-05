@@ -25,13 +25,13 @@ define('_SAVE' , '_');	// Capture source for current rule. Usage: [_SAVE _OR X Y
 Parser::$OP[_SAVE] = function(Parser $p, $pos, $rule)
 {
 	$len = $p->match($pos, $rule);
-	if ($len !== false) echo " [".mb_substr($p->text, $pos, $len) . "] ";
+	if ($len !== false) echo " [".substr($p->text, $pos, $len) . "] ";
 	return $len;
 };
 
 //---------------------------------------------------------------------------
 //$WORD = 'LETTERS';
-$WORD = '/^([^\\s\\"\\/]+)/';
+$WORD = '/[^\\s\\"\\/]+/';
 //OK:
 //$REGEXLIKE = ['SLASH', [_SAVE, Parser::_ANY, [Parser::_OR, $WORD, 'WHITESPACES'], ], [Parser::_ANY, 'SLASH']];
 //wrong:

@@ -1,7 +1,7 @@
 ﻿<?php
 /* 
   A simplistic recursive descent LL parser for simple, ad-hoc tasks
-  v0.3
+  v0.4
 */
 
 
@@ -41,24 +41,24 @@ class Parser
 	// preg_match (only ereg_... crap).)
 	// NOTE: PCRE *is* UNICODE-aware! --> http://pcre.org/original/doc/html/pcreunicode.html
 	static $ATOM = [
-		'EMPTY'      => '/^()/',
-		'SPACE'      => '/^(\\s)/',
-		'TAB'        => '/^(\\t)/',
-		'QUOTE'      => '/^(\\")/',
-		'APOSTROPHE' => "/^(')/",
-		'SLASH'      => '/^(\\/)/',
-		'IDCHAR'     => '/^([\\w])/', // [a-zA-Z0-9_], I guess
-		'ID'         => '/^([\\w]+)/',
-		'HEX'        => '/^([\\0-9a-fA-F])/',
+		'EMPTY'      => '//',
+		'SPACE'      => '/\\s/',
+		'TAB'        => '/\\t/',
+		'QUOTE'      => '/\\"/',
+		'APOSTROPHE' => "/'/",
+		'SLASH'      => '/\\//',
+		'IDCHAR'     => '/[\\w]/', // [a-zA-Z0-9_], I guess
+		'ID'         => '/[\\w]+/',
+		'HEX'        => '/[\\0-9a-fA-F]/',
 		// UNICODE-safe:
-		'DIGIT'      => '/^([\\p{N}])/u',
-		'DIGITS'     => '/^([\\p{N}]+)/u',
-		'LETTER'     => '/^([\\p{L}])/u',
-		'LETTERS'    => '/^([\\p{L}]+)/u',
-		'ALNUM'      => '/^([[:alnum:]])/u',
-		'ALNUMS'     => '/^([[:alnum:]]+)/u',
-		'WHITESPACE' => '/^([\\p{Z}])/u',
-		'WHITESPACES'=> '/^([\\p{Z}]+)/u',
+		'DIGIT'      => '/[\\p{N}]/u',
+		'DIGITS'     => '/[\\p{N}]+/u',
+		'LETTER'     => '/[\\p{L}]/u',
+		'LETTERS'    => '/[\\p{L}]+/u',
+		'ALNUM'      => '/[[:alnum:]]/u',
+		'ALNUMS'     => '/[[:alnum:]]+/u',
+		'WHITESPACE' => '/[\\p{Z}]/u',
+		'WHITESPACES'=> '/[\\p{Z}]+/u',
 	];
 
 	//-------------------------------------------------------------------
@@ -83,7 +83,7 @@ class Parser
 	public function parse($text, $syntax, $maxnest = self::DEFAULT_RECURSION_LIMIT)
 	{
 		$this->text = $text;
-		$this->text_length = mb_strlen($text);
+		$this->text_length = strlen($text);
 
 		$this->loopguard = $this->depth_reached = $maxnest;
 		$this->rules_tried = 0;
@@ -142,26 +142,32 @@ Parser::$OP[Parser::_TERMINAL] = function(Parser $p, $pos, $rule)
 	assert(is_string($rule));
 	++$p->terminals_tried;
 
-	$str = mb_substr($p->text, $pos);
+//	$str = substr($p->text, $pos);
+	//$m = []; // <-- No need: PHP will create one without notice.
 	if (Parser::atom($rule)) // atom pattern?
 	{	
-		$m = [];
-                if (preg_match(Parser::$ATOM[$rule], $str, $m)) {
-			return mb_strlen($m[1]);
+                if (preg_match(Parser::$ATOM[$rule], $p->text, $m, PREG_OFFSET_CAPTURE, $pos)
+			&& $m[0][1] == $pos) {
+			return strlen($m[0][0]);
 		} else	return false;
 
 	}
 	else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') // direct regex?
 	{
-                if (preg_match($rule, $str, $m)) {
-			return mb_strlen($m[1]);
+                if (preg_match($rule, $p->text, $m, PREG_OFFSET_CAPTURE, $pos)
+			&& $m[0][1] == $pos) {
+			return strlen($m[0][0]);
 		} else	return false;
 	}
 	else // literal non-regex pattern
 	{
-		$l = strlen($rule);	//! Not not mb_... because strncasecmp() will be used below! (I couldn't find a practical mb_strncasecmp(). :-o )
-		if (strncasecmp($str, $rule, $l) == 0) { //! might fail to ignore case for UNICODE, but nothing worse, hopefully!
-			return mb_strlen($rule); //!! Need to be consistent with the other positions (returned above)!
+		$len = strlen($rule);
+		//! Case-insensitivity=true will fail for UNICODE chars!
+		//! So we just go case-sensitive. All the $ATOMs are like that anyway, and
+		//! the user still has control to change it, but won't over a failing match...
+		if ($p->text_length - $pos >= $len //! needed to silence a PHP warning...
+			&& (substr_compare($p->text, $rule, $pos, $len) === 0) )  {
+			return $len;
 		} else	return false;
 	}
 };

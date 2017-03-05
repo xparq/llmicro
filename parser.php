@@ -1,7 +1,7 @@
 ﻿<?php
 /* 
-  A simplistic recursive descent LL parser for simple, ad-hoc tasks
-  v0.3
+  A simplistic recursive descent parser for simple, ad-hoc tasks
+  v0.4
 */
 
 //---------------------------------------------------------------------------//DBG()
@@ -16,7 +16,7 @@ class Parser
 	const DEFAULT_RECURSION_LIMIT = 500;
 
 	//---------------------------------------------------------------------------
-	// Grammar operators...
+	// Grammar operators... (regex-inspired)
 	//
 	// Can be referred to either as Parser::_SOME_OP, or as the 'literal' names.
 	// Can be freely extended by users (in sync with the ::$OP map below).
@@ -46,24 +46,24 @@ class Parser
 	// preg_match (only ereg_... crap).)
 	// NOTE: PCRE *is* UNICODE-aware! --> http://pcre.org/original/doc/html/pcreunicode.html
 	static $ATOM = [
-		'EMPTY'      => '/^()/',
-		'SPACE'      => '/^(\\s)/',
-		'TAB'        => '/^(\\t)/',
-		'QUOTE'      => '/^(\\")/',
-		'APOSTROPHE' => "/^(')/",
-		'SLASH'      => '/^(\\/)/',
-		'IDCHAR'     => '/^([\\w])/', // [a-zA-Z0-9_], I guess
-		'ID'         => '/^([\\w]+)/',
-		'HEX'        => '/^([\\0-9a-fA-F])/',
+		'EMPTY'      => '//',
+		'SPACE'      => '/\\s/',
+		'TAB'        => '/\\t/',
+		'QUOTE'      => '/\\"/',
+		'APOSTROPHE' => "/'/",
+		'SLASH'      => '/\\//',
+		'IDCHAR'     => '/[\\w]/', // [a-zA-Z0-9_], I guess
+		'ID'         => '/[\\w]+/',
+		'HEX'        => '/[\\0-9a-fA-F]/',
 		// UNICODE-safe:
-		'DIGIT'      => '/^([\\p{N}])/u',
-		'DIGITS'     => '/^([\\p{N}]+)/u',
-		'LETTER'     => '/^([\\p{L}])/u',
-		'LETTERS'    => '/^([\\p{L}]+)/u',
-		'ALNUM'      => '/^([[:alnum:]])/u',
-		'ALNUMS'     => '/^([[:alnum:]]+)/u',
-		'WHITESPACE' => '/^([\\p{Z}])/u',
-		'WHITESPACES'=> '/^([\\p{Z}]+)/u',
+		'DIGIT'      => '/[\\p{N}]/u',
+		'DIGITS'     => '/[\\p{N}]+/u',
+		'LETTER'     => '/[\\p{L}]/u',
+		'LETTERS'    => '/[\\p{L}]+/u',
+		'ALNUM'      => '/[[:alnum:]]/u',
+		'ALNUMS'     => '/[[:alnum:]]+/u',
+		'WHITESPACE' => '/[\\p{Z}]/u',
+		'WHITESPACES'=> '/[\\p{Z}]+/u',
 	];
 
 	//-------------------------------------------------------------------
@@ -88,7 +88,7 @@ class Parser
 	public function parse($text, $syntax, $maxnest = self::DEFAULT_RECURSION_LIMIT)
 	{
 		$this->text = $text;
-		$this->text_length = mb_strlen($text);
+		$this->text_length = strlen($text);
 
 		$this->loopguard = $this->depth_reached = $maxnest;
 		$this->rules_tried = 0;
@@ -110,7 +110,7 @@ class Parser
 			throw new Exception("--WTF? Infinite loop (in 'match()')!<br>\n");
 		}
 
-//DBG("match(): input '".mb_substr($this->text, $pos)."' against rule: ".dump($rule));
+//DBG("match(): input '".substr($this->text, $pos)."' against rule: ".dump($rule));
 		if (self::term($rule)) // Terminal rule: atom or literal pattern.
 		{
 DBG(" --> terminal rule: ".dump($rule));
@@ -152,32 +152,38 @@ Parser::$OP[Parser::_TERMINAL] = function(Parser $p, $pos, $rule)
 	assert(is_string($rule));
 	++$p->terminals_tried;
 
-	$str = mb_substr($p->text, $pos);
+//	$str = substr($p->text, $pos);
+	//$m = []; // <-- No need: PHP will create one without notice.
 	if (Parser::atom($rule)) // atom pattern?
 	{	
-		$m = [];
-DBG(" -- match_term(): matching atom '$rule' (".Parser::$ATOM[$rule].") against input: '$str'");
-                if (preg_match(Parser::$ATOM[$rule], $str, $m)) {
-DBG(" -- match_term(): MATCH! [$m[1]]");
-			return mb_strlen($m[1]);
+DBG(" -- match_term(): matching atom '$rule' (".Parser::$ATOM[$rule].") against input: '".substr($p->text, $pos)."'");
+                if (preg_match(Parser::$ATOM[$rule], $p->text, $m, PREG_OFFSET_CAPTURE, $pos)
+			&& $m[0][1] == $pos) {
+DBG(" -- match_term(): MATCH! [{$m[0][0]}]");
+			return strlen($m[0][0]);
 		} else	return false;
 
 	}
 	else if (!empty($rule) && $rule[0] == '/' && $rule[-1] == '/') // direct regex?
 	{
-DBG(" -- match_term(): matching direct regex '$rule' against input: '$str'");
-                if (preg_match($rule, $str, $m)) {
-DBG(" -- match_term(): MATCH! [$m[1]]");
-			return mb_strlen($m[1]);
+DBG(" -- match_term(): matching direct regex '$rule' against input: '".substr($p->text, $pos)."'");
+                if (preg_match($rule, $p->text, $m, PREG_OFFSET_CAPTURE, $pos)
+			&& $m[0][1] == $pos) {
+DBG(" -- match_term(): MATCH! [{$m[0][0]}]");
+			return strlen($m[0][0]);
 		} else	return false;
 	}
 	else // literal non-regex pattern
 	{
-DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
-		$l = strlen($rule);	//! Not not mb_... because strncasecmp() will be used below! (I couldn't find a practical mb_strncasecmp(). :-o )
-		if (strncasecmp($str, $rule, $l) == 0) { //! might fail to ignore case for UNICODE, but nothing worse, hopefully!
-DBG(" -- match_term(): MATCH! returning $l...");
-			return mb_strlen($rule); //!! Need to be consistent with the other positions (returned above)!
+DBG(" -- match_term(): matching literal '$rule' against input: '".substr($p->text, $pos)."'");
+		$len = strlen($rule);
+		//! Case-insensitivity=true will fail for UNICODE chars!
+		//! So we just go case-sensitive. All the $ATOMs are like that anyway, and
+		//! the user still has control to change it, but won't over a failing match...
+		if ($p->text_length - $pos >= $len //! needed to silence a PHP warning...
+			&& (substr_compare($p->text, $rule, $pos, $len) === 0) )  {
+DBG(" -- match_term(): MATCH! returning $len...");
+			return $len;
 		} else	return false;
 	}
 };
@@ -189,7 +195,7 @@ Parser::$OP[Parser::_SEQ] = function(Parser $p, $pos, $rule)
 	$len = 0;
 	foreach ($rule as $r)
 	{
-DBG(" -- match_seq($p->text, rule): matching chunk '".mb_substr($p->text, $pos)."' against rule: ".dump($rule));
+DBG(" -- match_seq($p->text, rule): matching chunk '".substr($p->text, $pos)."' against rule: ".dump($rule));
 		if (($l = $p->match($pos + $len, $r)) !== false) {
 			$len += $l;
 		} else	return false;
@@ -244,7 +250,7 @@ Parser::$OP[Parser::_ANY] = function(Parser $p, $pos, $rule)
 	$len = 0;
 	$r = $rule[0];
 	do {
-$chunk = mb_substr($p->text, $pos + $len);//DBG()
+$chunk = substr($p->text, $pos + $len);//DBG()
 DBG(" -- match_any(): iteration for '". $chunk ."'");
 		if (($l = $p->match($pos + $len, $r)) === false) {
 DBG(" -- match_any(): received false!");
@@ -272,7 +278,7 @@ Parser::$OP[Parser::_MANY] = function(Parser $p, $pos, $rule)
 	$r = $rule[0];
 	$at_least_one_match = false;
 	do {
-$chunk = mb_substr($p->text, $pos + $len);//DBG()
+$chunk = substr($p->text, $pos + $len);//DBG()
 DBG(" -- match_many_greedy(): iteration for '". $chunk ."'");
 		if (($l = $p->match($pos + $len, $r)) === false) {
 DBG(" -- match_many_greedy(): received false!");
