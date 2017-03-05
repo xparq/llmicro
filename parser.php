@@ -171,13 +171,13 @@ DBG(" -- match_term(): MATCH! [$m[1]]");
 			return mb_strlen($m[1]);
 		} else	return false;
 	}
-	else // literal non-pattern
+	else // literal non-regex pattern
 	{
 DBG(" -- match_term(): matching literal '$rule' against input: '$str'");
-		$l = mb_strlen($rule);
-               	if (strncasecmp($str, $rule, $l) == 0) { //!!SHOULD, coincidentally, be OK for UTF-8, right? :-o
+		$l = strlen($rule);	//! Not not mb_... because strncasecmp() will be used below! (I couldn't find a practical mb_strncasecmp(). :-o )
+		if (strncasecmp($str, $rule, $l) == 0) { //! might fail to ignore case for UNICODE, but nothing worse, hopefully!
 DBG(" -- match_term(): MATCH! returning $l...");
-			return $l;
+			return mb_strlen($rule); //!! Need to be consistent with the other positions (returned above)!
 		} else	return false;
 	}
 };

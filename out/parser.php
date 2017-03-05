@@ -1,7 +1,7 @@
 ﻿<?php
 /* 
   A simplistic recursive descent LL parser for simple, ad-hoc tasks
-  v0.2
+  v0.3
 */
 
 
@@ -25,6 +25,7 @@ class Parser
 
 	// Operator implementations...
 	// 
+	// Will be populated later below, according to:
 	// ::$OP[Parser::_SOME_OP] = function(Parser $p, $input_pos, $rule) { ... return match-length or false; }
 	// Can be freely extended by users (in sync with the keyword list above).
 	static $OP = [];
@@ -156,11 +157,11 @@ Parser::$OP[Parser::_TERMINAL] = function(Parser $p, $pos, $rule)
 			return mb_strlen($m[1]);
 		} else	return false;
 	}
-	else // literal non-pattern
+	else // literal non-regex pattern
 	{
-		$l = mb_strlen($rule);
-               	if (strncasecmp($str, $rule, $l) == 0) { //!!SHOULD, coincidentally, be OK for UTF-8, right? :-o
-			return $l;
+		$l = strlen($rule);	//! Not not mb_... because strncasecmp() will be used below! (I couldn't find a practical mb_strncasecmp(). :-o )
+		if (strncasecmp($str, $rule, $l) == 0) { //! might fail to ignore case for UNICODE, but nothing worse, hopefully!
+			return mb_strlen($rule); //!! Need to be consistent with the other positions (returned above)!
 		} else	return false;
 	}
 };

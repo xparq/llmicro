@@ -1,5 +1,10 @@
 ﻿* Make the mb_* crap transparent. Rather fail with Unicode inputs if no 
   mbstring, than require mbstring when no Unicode inputs!
+  ! Even better: try to eliminate all the mb_... crap and go by the 
+    binary positions, using preg_match(..., OFFSET_CAPTURE, $pos)!
+    But careful: this may not just be 100% possible! And "userland"
+    may get confused about being UTF-8 safe and *still* feeding them
+    with byte positions! It may even cause unsolvable problems to them!
 
 * OPs and ATOMs should be merged?
 

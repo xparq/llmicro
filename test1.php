@@ -74,14 +74,14 @@ test($o, "one two");
 test($o, "one twoxxx");
 
 echo "<h2>OK OK FAIL! FAIL! OK OK FAIL!</h2>";
-$o = ['one', ['?', ' '], ['?', 'two'], ['?', ' '], 'end'];
-test($o, "one end");	// OK
-test($o, "oneend");	// OK
-test($o, "one xxx end");	// FAIL!
-test($o, "onexxx end");	// FAIL!
-test($o, "onetwo end");	// OK
-test($o, "one two end");	// OK
-test($o, "one twoxxx end");	// FAIL!
+$o = ['one', ['?', ' '], ['?', 'kettő'], ['?', ' '], 'vége'];
+test($o, "one vége");	// OK
+test($o, "onevége");	// OK
+test($o, "one xxx vége");	// FAIL!
+test($o, "onexxx vége");	// FAIL!
+test($o, "onekettő vége");	// OK
+test($o, "one kettő vége");	// OK
+test($o, "one kettőxxx vége");	// FAIL!
 
 echo "<h1>REX...</h1>";
 echo "<h2>All but the first should match:</h2>";
