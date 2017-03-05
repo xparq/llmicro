@@ -1,6 +1,4 @@
-﻿* Rename the class from Parser to something less intrusive! (Like LLMicro?...)
-
-* Make the mb_* crap transparent. Rather fail with Unicode inputs if no 
+﻿* Make the mb_* crap transparent. Rather fail with Unicode inputs if no 
   mbstring, than require mbstring when no Unicode inputs!
 
 * OPs and ATOMs should be merged?
@@ -10,6 +8,12 @@
   Find an easy fix for them to mean QUOTED(") and QUOTED("")!
 
 * AST!
+
+? Rename the class from Parser to something less intrusive.
+  Like LLMicro, for a start.
+  -> This would be helpful only for big projects where there's a real risk
+     of another parser being integrated (and one that's also as impolitely
+     pushing itself into the namespace as this one; highly unlikely!... ;) ).
 
 =============================================================================
 DONE:

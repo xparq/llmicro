@@ -61,8 +61,30 @@ if (!empty($_GET)) {
 	die;
 }
 
-echo "REX...<br>";
+echo "<h1>OPT/OR...</h1>";
 
+$o = ['one', ['?', ' '], ['?', 'two']];
+echo "<h2>All these should match:</h2>";
+test($o, "one");
+test($o, "one ");
+test($o, "one xxx");
+test($o, "onexxx");
+test($o, "onetwo");
+test($o, "one two");
+test($o, "one twoxxx");
+
+echo "<h2>OK OK FAIL! FAIL! OK OK FAIL!</h2>";
+$o = ['one', ['?', ' '], ['?', 'two'], ['?', ' '], 'end'];
+test($o, "one end");	// OK
+test($o, "oneend");	// OK
+test($o, "one xxx end");	// FAIL!
+test($o, "onexxx end");	// FAIL!
+test($o, "onetwo end");	// OK
+test($o, "one two end");	// OK
+test($o, "one twoxxx end");	// FAIL!
+
+echo "<h1>REX...</h1>";
+echo "<h2>All but the first should match:</h2>";
 test($s, "/");
 test($s, "//");
 test($s, "/x/");
