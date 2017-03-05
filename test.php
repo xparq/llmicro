@@ -25,7 +25,7 @@ function test($syntax, $text)
 	static $test_case = 0;
 
 	echo "<hr><b>Test #" . ++$test_case . ":</b>";
-	echo '<pre>Input: <span class="input">'.$text.'</span></pre>';
+	echo '<pre>Input: <span class="input">&gt;'.$text.'&lt;</span></pre>';
 
 	$p = new Parser();
 

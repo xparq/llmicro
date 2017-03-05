@@ -5,6 +5,8 @@
     But careful: this may not just be 100% possible! And "userland"
     may get confused about being UTF-8 safe and *still* feeding them
     with byte positions! It may even cause unsolvable problems to them!
+    ! Note: preg_match(/^.../, OFFSET_CAPTURE, pos) will NEVER match! :-o
+      Must omit ^ and check pos == offset instead!
 
 * OPs and ATOMs should be merged?
 
