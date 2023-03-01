@@ -23,9 +23,9 @@ DONE:
   + Even better: try to eliminate all the mb_... crap and go by the 
     byte positions, using preg_match(..., OFFSET_CAPTURE, $pos) and the
     plain str functions! (Remember: UTF-8 strings have no embedded 0s!)
-    But careful: this may not be 100% possible! And "userland" may
-    get confused about being UTF-8 safe and *still* feeding seeing the
-    byte positions! Might it even cause unsolvable problems to them?
+    But careful: this may not be 100% possible! And "userland" may get
+    confused about being UTF-8 safe and *still* using byte positions!
+    Might it even cause unsolvable problems to them? :-o
     -> Note: preg_match(/^.../, OFFSET_CAPTURE, pos) will NEVER match! :-o
        + Must omit ^ from all the patterns and check pos == offset instead!
     + BTW, another missing link is determining the *length* of the matched 
@@ -38,7 +38,7 @@ DONE:
       substr logic!). As a bonus, the mb_* shit is now confined to two
       well-isolated places.
       Also: that "stateless" thing was just an illusion, the diagnostics
-      was real state, or else I should have deleted it... ;)
+      was real state, or else I could have just deleted it... ;)
 
 + Study a bit what the surprisingly deep recursion levels actually depend on,
   and how could that be optimized. (I read somewhere that if not proceeding 

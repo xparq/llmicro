@@ -1,7 +1,7 @@
 ﻿<?php
 /* 
   A simplistic recursive descent parser for simple, ad-hoc tasks
-  v0.4
+  0.401
 */
 
 //---------------------------------------------------------------------------//DBG()
@@ -35,15 +35,17 @@ class Parser
 	// Can be freely extended by users (in sync with the keyword list above).
 	static $OP = [];
 
-	// Atoms (terminal pattens) - just "metasyntactic sugar", as they could 
+	// Atoms (terminal pattens) -- "metasyntactic sugar" only, as they could
 	// as well be just literal patterns. But fancy random regex literals could
 	// confuse the parsing, so these "officially" nicely behaving ones are just 
-	// quarantined and named here.
+	// named & groomed here.
 	// (BTW, a user pattern that's not anchored to the left is guaranteed to 
 	// fail, as the relevant preg_match() call only returns the match length.
 	// It could be extended though, but I'm not sure about multibyte support,
 	// apart from my suspicion that mbstring *doesn't* have a position-capturing
-	// preg_match (only ereg_... crap).)
+	// preg_match (only ereg_... crap). [WOW, checking in from 2023: yep, still!
+	// however, according to the Git log, this thing doesn't even use mbstring
+	// any more! :-o b ])
 	// NOTE: PCRE *is* UNICODE-aware! --> http://pcre.org/original/doc/html/pcreunicode.html
 	static $ATOM = [
 		'EMPTY'      => '//',
