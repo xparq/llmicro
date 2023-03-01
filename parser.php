@@ -43,9 +43,9 @@ class Parser
 	// fail, as the relevant preg_match() call only returns the match length.
 	// It could be extended though, but I'm not sure about multibyte support,
 	// apart from my suspicion that mbstring *doesn't* have a position-capturing
-	// preg_match (only ereg_... crap). [WOW, checking in from 2023: yep, still!
-	// however, according to the Git log, this thing doesn't even use mbstring
-	// any more! :-o b ])
+	// preg_match (only ereg_... crap). [Wow, checking in from 2023: yep, still
+	// that's the case. However, according to the Git log, this thing doesn't
+	// even use mbstring any more!])
 	// NOTE: PCRE *is* UNICODE-aware! --> http://pcre.org/original/doc/html/pcreunicode.html
 	static $ATOM = [
 		'EMPTY'      => '//',

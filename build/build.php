@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 $INFILE = "parser.php";
 $OUTFILE = "out/parser.php";
@@ -10,11 +10,11 @@ $TESTFILE = "test.php";
 	if ($res != 0) exit($res);
         system("php -l $TESTFILE", $res);
 	if ($res != 0) exit($res);
-	
+
 
 // Filter the source:
 
-	file_put_contents($OUTFILE, 
+	$res = file_put_contents($OUTFILE,
 		implode(array_filter(file($INFILE), function($l) {
 				return !(
 						preg_match('/DBG\(.+/', $l)
@@ -23,3 +23,9 @@ $TESTFILE = "test.php";
 				})
 		)
 	);
+
+    if ($res === false) {
+        echo "- ERROR: Failed to write '$OUTFILE'!\n";
+    } else {
+        echo "OK, '$OUTFILE' updated (or created).\n";
+    }
